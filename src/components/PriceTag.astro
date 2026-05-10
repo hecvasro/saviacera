@@ -1,0 +1,17 @@
+---
+import { formatDOP } from "~/lib/format";
+
+interface Props {
+  amount: number;
+  size?: "sm" | "md" | "lg";
+  class?: string;
+}
+
+const { amount, size = "md", class: className = "" } = Astro.props;
+const sizeClass =
+  size === "lg" ? "text-3xl" : size === "sm" ? "text-sm" : "text-lg";
+---
+
+<span class:list={["font-medium text-foreground", sizeClass, className]}>
+  {formatDOP(amount)}
+</span>

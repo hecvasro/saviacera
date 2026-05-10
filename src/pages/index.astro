@@ -1,0 +1,107 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "~/layouts/BaseLayout.astro";
+import ProductCard from "~/components/ProductCard.astro";
+
+const all = await getCollection("products", ({ data }) => data.available);
+const featuredKits = all
+  .filter((p) => p.data.category === "kits" && p.data.featured)
+  .sort((a, b) => a.data.order - b.data.order);
+const featuredOther = all
+  .filter((p) => p.data.category !== "kits" && p.data.featured)
+  .sort((a, b) => a.data.order - b.data.order);
+---
+
+<BaseLayout>
+  <!-- Hero -->
+  <section class="relative">
+    <div class="container-page py-16 md:py-24 grid md:grid-cols-2 gap-10 items-center">
+      <div>
+        <p class="chip">Hecho a mano · RD</p>
+        <h1 class="mt-4 font-display text-5xl md:text-6xl leading-tight">
+          Pequeños rituales,<br />grandes momentos.
+        </h1>
+        <p class="mt-5 text-lg text-muted max-w-md">
+          Velas de soya, jabones artesanales y kits pensados para regalar — o
+          regalarte. Hechos a mano, en pequeñas tandas, en República Dominicana.
+        </p>
+        <div class="mt-7 flex gap-3 flex-wrap">
+          <a href="/kits" class="btn btn-primary">Ver kits de temporada</a>
+          <a href="/velas" class="btn btn-secondary">Explorar velas</a>
+        </div>
+      </div>
+      <div class="aspect-[4/5] rounded-lg overflow-hidden bg-surface shadow-md">
+        <img
+          src="https://picsum.photos/seed/saviacera-hero/900/1100"
+          alt="Velas y jabones Saviacera"
+          class="h-full w-full object-cover"
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured kits -->
+  {
+    featuredKits.length > 0 && (
+      <section class="container-page py-12">
+        <div class="flex items-end justify-between mb-6">
+          <div>
+            <p class="chip">Temporada</p>
+            <h2 class="mt-2 font-display text-3xl">Kits destacados</h2>
+          </div>
+          <a href="/kits" class="text-sm text-accent hover:underline">
+            Ver todos →
+          </a>
+        </div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {featuredKits.map((p) => (
+            <ProductCard product={p} />
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  <!-- Featured velas/jabones -->
+  {
+    featuredOther.length > 0 && (
+      <section class="container-page py-12">
+        <h2 class="font-display text-3xl mb-6">Favoritos</h2>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {featuredOther.map((p) => (
+            <ProductCard product={p} />
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  <!-- Brand story stub -->
+  <section class="bg-surface mt-16">
+    <div class="container-page py-16 grid md:grid-cols-2 gap-10 items-center">
+      <div class="aspect-square rounded-lg overflow-hidden">
+        <img
+          src="https://picsum.photos/seed/saviacera-story/800/800"
+          alt="Detrás de Saviacera"
+          class="h-full w-full object-cover"
+        />
+      </div>
+      <div>
+        <p class="chip">Nuestra historia</p>
+        <h2 class="mt-3 font-display text-3xl">De la cocina a tu casa</h2>
+        <p class="mt-4 text-muted">
+          Saviacera nació en una pequeña cocina dominicana, mezclando cera de
+          soya, aceites esenciales y mucha paciencia. Cada vela y cada jabón
+          se elabora a mano, en tandas pequeñas, cuidando los detalles que
+          hacen la diferencia.
+        </p>
+        <p class="mt-3 text-muted">
+          <em
+            >Lorem ipsum dolor sit amet — copy provisional. La esposa lo va a
+            reescribir con su voz cuando tenga el espacio listo.</em
+          >
+        </p>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

@@ -1,0 +1,46 @@
+---
+import type { CollectionEntry } from "astro:content";
+import PriceTag from "./PriceTag.astro";
+
+interface Props {
+  product: CollectionEntry<"products">;
+}
+
+const { product } = Astro.props;
+const cover = product.data.images[0];
+const coverSrc = typeof cover === "string" ? cover : cover.src;
+---
+
+<a
+  href={`/productos/${product.id}`}
+  class="group block rounded-lg border border-border bg-surface overflow-hidden hover:shadow-md transition-shadow"
+>
+  <div class="aspect-square overflow-hidden bg-beige">
+    <img
+      src={coverSrc}
+      alt={product.data.name}
+      loading="lazy"
+      class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+    />
+  </div>
+  <div class="p-4 flex flex-col gap-2">
+    <div class="flex items-start justify-between gap-3">
+      <h3 class="font-display text-lg leading-tight">{product.data.name}</h3>
+      <PriceTag amount={product.data.priceDOP} size="sm" />
+    </div>
+    {
+      product.data.tagline && (
+        <p class="text-sm text-muted line-clamp-2">{product.data.tagline}</p>
+      )
+    }
+    {
+      product.data.tags.length > 0 && (
+        <div class="flex flex-wrap gap-1.5 mt-1">
+          {product.data.tags.slice(0, 3).map((t) => (
+            <span class="chip">{t}</span>
+          ))}
+        </div>
+      )
+    }
+  </div>
+</a>

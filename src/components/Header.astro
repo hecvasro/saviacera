@@ -1,0 +1,76 @@
+---
+const { pathname } = Astro.url;
+const navItems = [
+  { href: "/velas", label: "Velas" },
+  { href: "/jabones", label: "Jabones" },
+  { href: "/kits", label: "Kits" },
+];
+---
+
+<header class="border-b border-border bg-background/80 backdrop-blur sticky top-0 z-30">
+  <div class="container-page flex items-center justify-between py-4">
+    <a href="/" class="font-display text-2xl tracking-tight">Saviacera</a>
+
+    <nav class="hidden md:flex items-center gap-8 text-sm">
+      {
+        navItems.map((item) => {
+          const active = pathname.startsWith(item.href);
+          return (
+            <a
+              href={item.href}
+              class:list={[
+                "transition-colors hover:text-accent",
+                active ? "text-accent" : "text-foreground",
+              ]}
+            >
+              {item.label}
+            </a>
+          );
+        })
+      }
+    </nav>
+
+    <a
+      href="/carrito"
+      class="relative inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-surface"
+      aria-label="Ver carrito"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.6"
+        class="h-5 w-5"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.7 5h13.4M9 21a1 1 0 11-2 0 1 1 0 012 0zm10 0a1 1 0 11-2 0 1 1 0 012 0z"
+        ></path>
+      </svg>
+      <span>Carrito</span>
+      <span
+        data-cart-count
+        class="ml-1 hidden min-w-[1.5rem] rounded-full bg-accent px-1.5 py-0.5 text-center text-xs text-accent-contrast"
+        >0</span
+      >
+    </a>
+  </div>
+</header>
+
+<script>
+  import { getCartCount } from "~/lib/cart";
+
+  function refresh() {
+    const el = document.querySelector<HTMLElement>("[data-cart-count]");
+    if (!el) return;
+    const n = getCartCount();
+    el.textContent = String(n);
+    el.classList.toggle("hidden", n === 0);
+  }
+
+  refresh();
+  window.addEventListener("saviacera:cart-changed", refresh);
+  document.addEventListener("astro:page-load", refresh);
+</script>

@@ -1,0 +1,34 @@
+# Build output
+dist/
+.astro/
+
+# Dependencies
+node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+
+# Editors
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# OS / misc
+*.tsbuildinfo
+.cache/
+coverage/
+
+# Local Astro
+.netlify/
+.vercel/
+.wrangler/

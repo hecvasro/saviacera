@@ -1,0 +1,170 @@
+---
+import { getCollection, render } from "astro:content";
+import BaseLayout from "~/layouts/BaseLayout.astro";
+import PriceTag from "~/components/PriceTag.astro";
+
+export async function getStaticPaths() {
+  const products = await getCollection("products");
+  return products.map((p) => ({
+    params: { slug: p.id },
+    props: { product: p },
+  }));
+}
+
+const { product } = Astro.props;
+const { Content } = await render(product);
+const images = product.data.images.map((img) =>
+  typeof img === "string" ? img : img.src,
+);
+const cover = images[0];
+const categoryLabel: Record<string, string> = {
+  velas: "Vela",
+  jabones: "Jabón",
+  kits: "Kit",
+};
+---
+
+<BaseLayout title={`${product.data.name} — Saviacera`} description={product.data.description}>
+  <section class="container-page py-10 grid md:grid-cols-2 gap-10">
+    <!-- Gallery -->
+    <div>
+      <div class="aspect-square rounded-lg overflow-hidden bg-surface">
+        <img
+          src={cover}
+          alt={product.data.name}
+          id="pdp-main-image"
+          class="h-full w-full object-cover"
+        />
+      </div>
+      {
+        images.length > 1 && (
+          <div class="mt-3 grid grid-cols-4 gap-2">
+            {images.map((src, i) => (
+              <button
+                type="button"
+                class="aspect-square overflow-hidden rounded-md border border-border"
+                data-thumb
+                data-src={src}
+                aria-label={`Imagen ${i + 1}`}
+              >
+                <img src={src} alt="" class="h-full w-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )
+      }
+    </div>
+
+    <!-- Detail -->
+    <div>
+      <p class="chip">{categoryLabel[product.data.category] || product.data.category}</p>
+      <h1 class="mt-3 font-display text-4xl">{product.data.name}</h1>
+      {
+        product.data.tagline && (
+          <p class="mt-1 text-muted">{product.data.tagline}</p>
+        )
+      }
+
+      <div class="mt-5">
+        <PriceTag amount={product.data.priceDOP} size="lg" />
+      </div>
+
+      <p class="mt-5 text-foreground/90 whitespace-pre-line">
+        {product.data.description}
+      </p>
+
+      {
+        product.data.includes.length > 0 && (
+          <div class="mt-6">
+            <h3 class="text-sm uppercase tracking-wide text-muted">Incluye</h3>
+            <ul class="mt-2 space-y-1 text-foreground">
+              {product.data.includes.map((line) => (
+                <li class="flex gap-2">
+                  <span aria-hidden="true">·</span>
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      }
+
+      {
+        product.data.details.length > 0 && (
+          <div class="mt-6">
+            <h3 class="text-sm uppercase tracking-wide text-muted">Detalles</h3>
+            <ul class="mt-2 space-y-1 text-foreground">
+              {product.data.details.map((line) => (
+                <li>{line}</li>
+              ))}
+            </ul>
+          </div>
+        )
+      }
+
+      <div class="mt-8 flex flex-wrap gap-3">
+        <button
+          type="button"
+          class="btn btn-primary"
+          data-add-to-cart
+          data-slug={product.id}
+          data-name={product.data.name}
+          data-price={product.data.priceDOP}
+          data-image={cover}
+        >
+          Agregar al carrito
+        </button>
+        <a href="/carrito" class="btn btn-secondary">Ir al carrito</a>
+      </div>
+
+      <p
+        data-add-confirmation
+        class="mt-3 hidden text-sm text-success"
+        role="status"
+        aria-live="polite"
+      >
+        Agregado al carrito.
+      </p>
+
+      <article class="prose prose-stone mt-10 max-w-none text-foreground/90">
+        <Content />
+      </article>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { addToCart } from "~/lib/cart";
+
+  function bind() {
+    // Thumbnails swap the main image.
+    document.querySelectorAll<HTMLButtonElement>("[data-thumb]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const main = document.getElementById("pdp-main-image") as HTMLImageElement | null;
+        if (main && btn.dataset.src) main.src = btn.dataset.src;
+      });
+    });
+
+    // Add to cart button.
+    const addBtn = document.querySelector<HTMLButtonElement>("[data-add-to-cart]");
+    if (addBtn) {
+      addBtn.addEventListener("click", () => {
+        const slug = addBtn.dataset.slug || "";
+        const name = addBtn.dataset.name || "";
+        const unitPrice = Number(addBtn.dataset.price || 0);
+        const image = addBtn.dataset.image || undefined;
+        if (!slug || !name || !unitPrice) return;
+
+        addToCart({ slug, name, unitPrice, image });
+        const note = document.querySelector<HTMLElement>("[data-add-confirmation]");
+        if (note) {
+          note.classList.remove("hidden");
+          window.setTimeout(() => note.classList.add("hidden"), 2400);
+        }
+      });
+    }
+  }
+
+  bind();
+  document.addEventListener("astro:page-load", bind);
+</script>

@@ -1,0 +1,35 @@
+{
+  "name": "saviacera",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Saviacera — velas de soya, jabones y kits artesanales (RD).",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "format": "prettier --write \"**/*.{astro,ts,tsx,js,jsx,md,css,json}\"",
+    "format:check": "prettier --check \"**/*.{astro,ts,tsx,js,jsx,md,css,json}\"",
+    "lint": "eslint \"src/**/*.{ts,tsx,astro}\""
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.4",
+    "astro": "^5.0.0",
+    "typescript": "^5.6.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "tailwindcss": "^4.0.0",
+    "eslint": "^9.13.0",
+    "eslint-plugin-astro": "^1.3.0",
+    "@typescript-eslint/parser": "^8.11.0",
+    "@typescript-eslint/eslint-plugin": "^8.11.0",
+    "prettier": "^3.3.3",
+    "prettier-plugin-astro": "^0.14.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

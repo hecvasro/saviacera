@@ -1,0 +1,165 @@
+---
+import BaseLayout from "~/layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="Carrito — Saviacera">
+  <section class="container-page py-10 max-w-3xl">
+    <p class="chip">Tu pedido</p>
+    <h1 class="mt-3 font-display text-4xl">Carrito</h1>
+
+    <!-- Empty state -->
+    <div data-cart-empty class="mt-8 hidden text-muted">
+      <p>Tu carrito está vacío.</p>
+      <a href="/" class="mt-3 inline-block btn btn-secondary">Seguir comprando</a>
+    </div>
+
+    <!-- Lines -->
+    <ul data-cart-lines class="mt-8 divide-y divide-border"></ul>
+
+    <!-- Summary -->
+    <div data-cart-summary class="mt-8 hidden">
+      <div class="flex justify-between text-lg">
+        <span class="font-medium">Subtotal</span>
+        <span data-cart-subtotal class="font-medium">RD$0</span>
+      </div>
+      <p class="mt-2 text-sm text-muted">
+        El envío y la coordinación de pago se acuerdan por WhatsApp.
+      </p>
+
+      <button
+        type="button"
+        class="btn btn-primary w-full mt-6 justify-center"
+        data-confirm-checkout
+      >
+        Confirmar pedido por WhatsApp
+      </button>
+
+      <button
+        type="button"
+        class="mt-3 text-sm text-muted hover:text-danger underline"
+        data-clear-cart
+      >
+        Vaciar carrito
+      </button>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { getCart, getSubtotal, removeFromCart, setQty, clearCart } from "~/lib/cart";
+  import { formatDOP } from "~/lib/format";
+  import { confirmCheckout } from "~/lib/checkout";
+
+  function escapeHtml(s: string): string {
+    return s
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function render() {
+    const linesEl = document.querySelector<HTMLElement>("[data-cart-lines]");
+    const emptyEl = document.querySelector<HTMLElement>("[data-cart-empty]");
+    const summaryEl = document.querySelector<HTMLElement>("[data-cart-summary]");
+    const subtotalEl = document.querySelector<HTMLElement>("[data-cart-subtotal]");
+    if (!linesEl || !emptyEl || !summaryEl || !subtotalEl) return;
+
+    const cart = getCart();
+
+    if (cart.length === 0) {
+      linesEl.innerHTML = "";
+      emptyEl.classList.remove("hidden");
+      summaryEl.classList.add("hidden");
+      return;
+    }
+
+    emptyEl.classList.add("hidden");
+    summaryEl.classList.remove("hidden");
+
+    linesEl.innerHTML = cart
+      .map((item) => {
+        const lineTotal = item.unitPrice * item.qty;
+        const img = item.image
+          ? `<img src="${escapeHtml(item.image)}" alt="" class="h-20 w-20 rounded-md object-cover bg-surface" />`
+          : `<div class="h-20 w-20 rounded-md bg-surface"></div>`;
+        return `
+          <li class="py-4 flex gap-4 items-center">
+            ${img}
+            <div class="flex-1">
+              <a href="/productos/${escapeHtml(item.slug)}" class="font-medium hover:text-accent">${escapeHtml(item.name)}</a>
+              <div class="text-sm text-muted">${formatDOP(item.unitPrice)} c/u</div>
+              <div class="mt-2 inline-flex items-center gap-2 rounded-md border border-border">
+                <button type="button" class="px-3 py-1 hover:bg-surface" data-dec data-slug="${escapeHtml(item.slug)}" aria-label="Restar">−</button>
+                <span class="px-2 min-w-[2ch] text-center">${item.qty}</span>
+                <button type="button" class="px-3 py-1 hover:bg-surface" data-inc data-slug="${escapeHtml(item.slug)}" aria-label="Sumar">+</button>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="font-medium">${formatDOP(lineTotal)}</div>
+              <button type="button" class="mt-1 text-xs text-muted hover:text-danger underline" data-remove data-slug="${escapeHtml(item.slug)}">Quitar</button>
+            </div>
+          </li>
+        `;
+      })
+      .join("");
+
+    subtotalEl.textContent = formatDOP(getSubtotal());
+  }
+
+  function bind() {
+    document.body.addEventListener("click", (e) => {
+      const t = e.target as HTMLElement;
+
+      const inc = t.closest<HTMLButtonElement>("[data-inc]");
+      if (inc) {
+        const slug = inc.dataset.slug || "";
+        const cart = getCart();
+        const item = cart.find((i) => i.slug === slug);
+        if (item) setQty(slug, item.qty + 1);
+        return;
+      }
+
+      const dec = t.closest<HTMLButtonElement>("[data-dec]");
+      if (dec) {
+        const slug = dec.dataset.slug || "";
+        const cart = getCart();
+        const item = cart.find((i) => i.slug === slug);
+        if (item) setQty(slug, item.qty - 1);
+        return;
+      }
+
+      const rem = t.closest<HTMLButtonElement>("[data-remove]");
+      if (rem) {
+        const slug = rem.dataset.slug || "";
+        if (slug) removeFromCart(slug);
+        return;
+      }
+
+      const clr = t.closest<HTMLButtonElement>("[data-clear-cart]");
+      if (clr) {
+        if (confirm("¿Vaciar el carrito?")) clearCart();
+        return;
+      }
+
+      const ck = t.closest<HTMLButtonElement>("[data-confirm-checkout]");
+      if (ck) {
+        ck.disabled = true;
+        ck.textContent = "Preparando…";
+        void confirmCheckout().finally(() => {
+          ck.disabled = false;
+          ck.textContent = "Confirmar pedido por WhatsApp";
+        });
+      }
+    });
+
+    window.addEventListener("saviacera:cart-changed", render);
+  }
+
+  render();
+  bind();
+  document.addEventListener("astro:page-load", () => {
+    render();
+  });
+</script>

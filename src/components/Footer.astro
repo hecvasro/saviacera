@@ -1,0 +1,42 @@
+---
+const year = new Date().getFullYear();
+---
+
+<footer class="mt-24 border-t border-border bg-surface">
+  <div class="container-page py-10 grid gap-6 md:grid-cols-3 text-sm text-muted">
+    <div>
+      <p class="font-display text-xl text-foreground">Saviacera</p>
+      <p class="mt-2 max-w-xs">
+        Velas de soya, jabones y kits artesanales hechos a mano en República Dominicana.
+      </p>
+    </div>
+    <div>
+      <p class="font-medium text-foreground">Catálogo</p>
+      <ul class="mt-2 space-y-1">
+        <li><a href="/velas" class="hover:text-accent">Velas</a></li>
+        <li><a href="/jabones" class="hover:text-accent">Jabones</a></li>
+        <li><a href="/kits" class="hover:text-accent">Kits</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="font-medium text-foreground">Contacto</p>
+      <ul class="mt-2 space-y-1">
+        <li>
+          <a
+            href="https://wa.me/18295286271"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="hover:text-accent">WhatsApp: +1 (829) 528-6271</a
+          >
+        </li>
+        <li>Santo Domingo, RD</li>
+      </ul>
+    </div>
+  </div>
+  <div class="border-t border-border">
+    <div class="container-page py-4 text-xs text-muted flex justify-between">
+      <span>© {year} Saviacera</span>
+      <span>Hecho a mano · Made in DR</span>
+    </div>
+  </div>
+</footer>
