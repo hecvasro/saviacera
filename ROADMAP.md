@@ -12,7 +12,9 @@ Last updated: 2026-05-11.
 - **CI**: none. Deploys are manual via `npm run deploy` from a machine with the API token loaded.
 - **Content**: 3 example products in `src/content/products/` (all with picsum placeholder images).
 - **Order flow**: NOT YET FUNCTIONAL in production — see "Blocking production go-live" below.
-- **Wife-facing workflow**: six Spanish skills in `.claude/skills/` (`/agregar-producto`, `/editar-producto`, `/borrar-producto`, `/actualizar-foto`, `/cambiar-color`, `/publicar`) ready to use. Each skill ends by pushing to `main`. With auto-deploy not yet wired, Hector still has to run `npm run deploy` after the wife's pushes for changes to appear on the live site.
+- **Content-management strategy**: two interfaces sharing the same markdown files.
+  - **Decap CMS** at `saviacera.com/admin/` — primary path for the non-technical owner. Web form, GitHub OAuth login, no install. **NOT YET BUILT.** Implementation plan in CLAUDE.md → "Building Decap CMS".
+  - **Claude Code skills** at `.claude/skills/` — Hector's tool and fallback. Six Spanish skills (`/agregar-producto`, `/editar-producto`, `/borrar-producto`, `/actualizar-foto`, `/cambiar-tema`, `/publicar`) ready and tested.
 
 ## Done
 
@@ -23,7 +25,8 @@ Last updated: 2026-05-11.
 - [x] `wrangler` installed as devDep, `npm run deploy` / `npm run deploy:preview` scripts.
 - [x] Cloudflare Pages project `saviacera` created, first deploy succeeded.
 - [x] Custom domain `saviacera.com` attached (apex + `www`), CNAMEs created in Cloudflare-managed zone, certs issued and active (commit `e1c0e57`).
-- [x] Wife-facing Spanish skills authored under `.claude/skills/`. CLAUDE.md documents skill design principles; README.md has a wife-facing "cómo administrar el sitio" section listing the slash commands.
+- [x] Wife-facing Spanish skills authored under `.claude/skills/` (six skills, conversational Q&A pattern, commit + push at the end).
+- [x] Strategy pivot decision (2026-05-11 PM): Decap CMS becomes the primary content-management interface for the non-technical owner. Skills become Hector's tool / fallback. Detailed Decap implementation plan captured in CLAUDE.md.
 
 ## In-flight / decision needed
 
@@ -39,19 +42,30 @@ Requires interactive OAuth in the dashboard (Cloudflare authorizes against GitHu
 
 **Caveat**: production env vars then live in the Cloudflare dashboard, not `.env.local`. Keep them in sync mentally or treat the dashboard as canonical for production builds.
 
-### Priority 2 — Wife setup (one-time per machine)
+### Priority 2 — Build Decap CMS
 
-For the wife to actually use the skills:
+The primary interface for the non-technical owner. Won't be useful until P1 (auto-deploy) lands. Full implementation plan in CLAUDE.md → "Building Decap CMS". Step-by-step:
 
-1. Install Claude Code on her Mac.
-2. Generate an SSH key on her machine and add it to her GitHub account (or use Hector's account for git access — TBD).
-3. Grant her push access to `hecvasro/saviacera` (add as collaborator).
-4. Clone the repo to her machine.
-5. `npm install` (one time, so `npm run dev` works for local preview if she wants it).
+1. GitHub OAuth App + auth proxy (Cloudflare Pages Functions example or hosted alternative).
+2. Add `public/admin/index.html` (CDN-loaded Decap) + `public/admin/config.yml` with the products collection.
+3. Smoke-test: add a product through the form, verify GH auto-deploy fires, site updates.
+4. Add the `theme` collection (fonts, colors, optional logo image) + the build wiring that translates the JSON into CSS variables and the Google Fonts `<link>`.
+5. (Optional) Cloudflare Access in front of `/admin/*` for an extra magic-link layer.
+6. Wife onboarding: add as GitHub collaborator, send her the `/admin/` URL, walk through one product creation.
+7. Flip CLAUDE.md + README.md from "próximamente" to "active".
 
-Once auto-deploy (P1) is wired, she does **not** need `.envrc.local`, the Cloudflare token, or wrangler. Just git access + Claude Code.
+### Priority 3 — Wife setup (one-time)
 
-### Priority 3 — `www` → apex redirect (canonical hardening)
+After Decap (P2) is live, she needs almost nothing local:
+
+1. Create a GitHub account (free) if she doesn't have one.
+2. Hector adds her as a collaborator on `hecvasro/saviacera` with write access.
+3. (If using Cloudflare Access) Confirm her email is allow-listed.
+4. Send her the `/admin/` URL.
+
+No Claude Code, no SSH keys, no `npm install`, no terminal. If at some later point she wants the conversational Claude flow as well, the skills are there waiting.
+
+### Priority 4 — `www` → apex redirect (canonical hardening)
 
 Both apex and www currently serve the same content with 200. For real SEO canonical behavior, www should 301 → apex. Three paths open (you picked apex as canonical, so direction is set; only the **mechanism** is undecided):
 
@@ -73,7 +87,8 @@ These need to be resolved before the site can actually take orders. Currently th
 
 ## Short-term backlog (after go-live)
 
-- [ ] **Real product photos** to replace `picsum.photos` placeholders. Upload to `src/assets/products/<slug>/` and reference as relative paths in each `.md` (`/actualizar-foto` skill walks through this for the wife). Schema already supports both URL and local image refs.
+- [ ] **Real product photos** to replace `picsum.photos` placeholders. Upload to `src/assets/products/<slug>/` and reference as relative paths in each `.md` (`/actualizar-foto` skill walks through this; Decap will handle upload + commit once built). Schema already supports both URL and local image refs.
+- [ ] **Wire the brand logo asset** when the wife provides it. Two code paths to keep open in `Header.astro`: (a) wordmark text in `--font-display` or a new `--font-logo` variable, (b) `<img src="/logo.svg" alt="Saviacera" />` if the logo is a baked image. The `cambiar-tema` skill documents both for the owner; we'll need to actually implement the conditional in Header when she's ready.
 - [ ] **Sitemap + robots.txt**. Astro has `@astrojs/sitemap` integration — one-liner setup.
 - [ ] **Basic SEO**: per-page `<title>`/`<meta description>`/OG tags. `BaseLayout.astro` likely already takes a `title` prop; audit.
 - [ ] **Analytics**. Cloudflare Web Analytics (free, no cookie banner) is the lowest-friction option.

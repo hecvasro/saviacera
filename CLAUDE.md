@@ -9,9 +9,10 @@ Astro 5 + Tailwind v4 static site. Spanish (DR) primary, English wired up for la
 - [ROADMAP.md](./ROADMAP.md) — handoff doc: what's done, what's pending, what needs a decision. Read this first when picking up a session cold.
 - This file (CLAUDE.md) — technical/operating reference for Claude sessions: stack, deploy plumbing, credentials, conventions.
 
-**Content-management strategy**: products are markdown files (Astro content collections). The non-technical owner (Hector's wife) doesn't edit files directly — instead she **uses Claude Code as the interface**. Six project-local skills in `.claude/skills/` drive guided Q&A flows in Spanish for each common task (`/agregar-producto`, `/editar-producto`, `/borrar-producto`, `/actualizar-foto`, `/cambiar-color`, `/publicar`). When she's done with a task, the skill commits + pushes; Cloudflare Pages auto-deploys on push to `main` (see "Deployment" below). She never touches wrangler, the API token, or `.envrc.local`.
+**Content-management strategy** — two interfaces, same markdown files:
 
-**Alternative considered, not chosen**: Decap CMS (free static admin panel that commits to git). The schema in `src/content.config.ts` is intentionally Decap-friendly (flat scalars, simple arrays, no relations) so this remains a viable fallback if the Claude-as-interface approach doesn't fit. If Decap is added later, see "Alternative: Decap CMS path" below.
+1. **Decap CMS (primary, for the non-technical owner) — not yet built.** Web admin panel at `saviacera.com/admin/`. She logs in (GitHub OAuth, optionally fronted by Cloudflare Access magic link) and edits products through forms. Decap commits to `main`; GH auto-deploy fires; site updates. She doesn't install or learn any tooling. The schema in `src/content.config.ts` is structured for this (flat scalars, simple arrays, no relations). Implementation plan in "Building Decap" below.
+2. **Claude Code skills (for Hector, and as a fallback)** — six skills under `.claude/skills/` drive guided Spanish Q&A flows (`/agregar-producto`, `/editar-producto`, `/borrar-producto`, `/actualizar-foto`, `/cambiar-tema`, `/publicar`). Both interfaces edit the same files; they coexist as long as edits don't overlap in time.
 
 **Long-term direction**: even simpler — products managed via **Google Sheets** with a build hook that pulls the sheet into the site. Design not started; open questions in ROADMAP.md → "Long-term direction".
 
@@ -179,7 +180,7 @@ Six project-local skills in `.claude/skills/` drive guided Spanish Q&A flows for
 | `/editar-producto`    | Locate an existing product, ask what to change, apply via `Edit`, commit + push. |
 | `/borrar-producto`    | Offers two paths: despublish (`available: false`) or hard delete (`git rm`). Defaults to despublish. |
 | `/actualizar-foto`    | Replace, add, remove, or reorder the `images:` array on a product.            |
-| `/cambiar-color`      | Walk through a `src/styles/tokens.css` change (color, font, radius, spacing). Adds Google Fonts `<link>` to `BaseLayout.astro` when font changes. |
+| `/cambiar-tema`       | Walk through a `src/styles/tokens.css` change (color, font, radius, spacing, shadow). Adds Google Fonts `<link>` to `BaseLayout.astro` when font changes. Documents logo-font wiring path for future. |
 | `/publicar`           | Inspect pending changes, commit, push. Fallback when a skill above left changes unpublished. |
 
 Each skill ends by pushing to `main`. Once GitHub auto-deploy is set up (see "Setting up GitHub auto-deploy" above), the push **is** the deploy. Until then, Hector still needs to run `npm run deploy` after the wife's skill-driven changes — the `publicar` skill has a note about that and reads CLAUDE.md to decide what message to show the user.
@@ -195,18 +196,122 @@ Each skill ends by pushing to `main`. Once GitHub auto-deploy is set up (see "Se
 
 When updating skills, keep the SKILL.md description tight (one sentence in Spanish, with verbs that match how the user might phrase the request — "agregar producto", "subir un jabón", "nuevo kit", etc.). The description is what Claude uses to decide which skill matches a freeform request.
 
-## Alternative: Decap CMS path (not active)
+## Building Decap CMS (planned, not yet implemented)
 
-The current direction is Claude-as-interface (skills above). If that ever feels wrong — e.g. the wife prefers a structured form over conversation, or there are multiple non-technical editors — Decap CMS is the documented fallback. Decap is a static admin panel that runs at `/admin/` and commits directly to the git repo. Free, no server, no DB.
+Decap is the **primary content-management interface for the non-technical owner**. Status: not built yet. This section is the implementation plan for the session that builds it.
 
-To enable Decap later:
+### Architecture
 
-1. Install: `npm i -D decap-cms-app` (or use the CDN-hosted version — one HTML file).
-2. Create `public/admin/index.html` and `public/admin/config.yml`. The `config.yml` maps the Zod schema in `src/content.config.ts` to Decap's collection format. The schema was designed for this — flat scalars, simple arrays, no relations.
-3. Auth: GitHub OAuth via Cloudflare Pages Functions, or Netlify Identity (free), or the simpler "git-gateway" approach.
-4. Result: wife opens `https://saviacera.com/admin/`, logs in, fills a form per product. Decap commits to `main` → auto-deploy fires → site updates.
+Decap is a single-page React app loaded from a CDN. It lives at `/admin/` on the site, reads `/admin/config.yml`, and commits content changes directly to git through a backend (GitHub OAuth is the simplest). No server, no database.
 
-The Claude-driven and Decap paths are **not mutually exclusive** — both edit the same markdown files. But running both invites confusion (which is canonical when they're edited in different ways minutes apart?), so commit to one.
+```
+public/admin/index.html        # Two-line file: loads Decap from CDN.
+public/admin/config.yml        # The CMS schema — collections, fields, auth backend.
+public/uploads/                # Decap-managed image uploads (committed to git).
+```
+
+### Auth
+
+**Recommended**: GitHub OAuth via the **Decap GitHub backend**. Requires:
+
+1. A GitHub OAuth App. Cloudflare provides a free OAuth proxy for Decap via Cloudflare Pages Functions (alternative to running your own — Decap docs link the example).
+2. The owner has a GitHub account and is added as a **collaborator with write access** to `hecvasro/saviacera`. That collaborator membership is the only authorization gate — Decap delegates entirely to GitHub.
+3. Optional extra layer: **Cloudflare Access** in front of `/admin/*`. Free for ≤50 users. Magic-link to email. Filters out drive-by traffic before even reaching the GitHub login.
+
+The combination = the "password protection" mentioned in conversation: email-magic-link to reach `/admin/`, then GitHub OAuth to authenticate the actual edit session.
+
+### Collections to define
+
+Map the Zod schema in `src/content.config.ts` to Decap. The current schema is intentionally flat for this:
+
+```yaml
+collections:
+  - name: products
+    label: Productos
+    folder: src/content/products
+    format: yaml-frontmatter
+    create: true
+    slug: '{{slug}}'                       # filename = slug (Astro convention)
+    fields:
+      - { name: name,        label: Nombre,        widget: string }
+      - { name: tagline,     label: Frase corta,   widget: string, required: false }
+      - { name: description, label: Descripción,   widget: text }
+      - name: category
+        label: Categoría
+        widget: select
+        options: [velas, jabones, kits]
+      - { name: tags,        label: Etiquetas,     widget: list, required: false }
+      - { name: priceDOP,    label: Precio (DOP),  widget: number, value_type: int, min: 0 }
+      - { name: sku,         label: SKU,           widget: string, required: false }
+      - { name: stock,       label: Inventario,    widget: number, value_type: int, min: 0, required: false }
+      - { name: available,   label: Disponible,    widget: boolean, default: true }
+      - name: images
+        label: Fotos
+        widget: list
+        field: { name: image, label: Imagen, widget: image }
+      - name: includes
+        label: "Incluye (solo kits)"
+        widget: list
+        required: false
+        field: { name: item, label: Item, widget: string }
+      - name: details
+        label: Detalles
+        widget: list
+        required: false
+        field: { name: detail, label: Detalle, widget: string }
+      - { name: featured,    label: Destacado,     widget: boolean, default: false }
+      - { name: order,       label: Orden,         widget: number, value_type: int, default: 100 }
+      - { name: createdAt,   label: Fecha,         widget: datetime, required: false }
+      - { name: body,        label: Texto largo,   widget: markdown }
+```
+
+### Theme/config collection (for fonts + colors via Decap)
+
+A second collection for site-wide theme settings. Single-file collection backed by a JSON or YAML config that the build reads at build time and injects into `tokens.css` (or as inline CSS variables in `BaseLayout.astro`):
+
+```yaml
+  - name: theme
+    label: Tema visual
+    files:
+      - name: site
+        label: Configuración del tema
+        file: src/content/theme/site.json
+        fields:
+          - { name: fontDisplay, label: "Fuente de títulos",     widget: string, default: "Cormorant Garamond" }
+          - { name: fontBody,    label: "Fuente del texto",      widget: string, default: "Inter" }
+          - { name: fontLogo,    label: "Fuente del logo",       widget: string, required: false }
+          - { name: colorAccent, label: "Color de acento",       widget: color }
+          - { name: colorBackground, label: "Color de fondo",    widget: color }
+          # ... etc per the tokens.css palette
+          - { name: logoImage,   label: "Imagen del logo (opcional)", widget: image, required: false }
+```
+
+Build wiring: a small Astro integration or pre-build script reads `src/content/theme/site.json` and writes the relevant `:root { --color-accent: …; --font-display: …; }` overrides. The Google Fonts `<link>` in `BaseLayout.astro` becomes a template that fills in the chosen `fontDisplay` and `fontBody` names. If `logoImage` is set, `Header.astro` renders the `<img>`; otherwise it renders the wordmark text.
+
+This means **she changes a font from a dropdown / text field in Decap, and the site picks it up** without anyone touching tokens.css.
+
+### Logo handling
+
+The current Header renders the wordmark as text. Two future states (the `cambiar-tema` skill documents both for the owner):
+
+- **Wordmark only**: text in `--font-display` (today) or `--font-logo` if separated.
+- **Image logo**: an SVG/PNG in `public/logo.svg` (or uploaded via Decap to `public/uploads/`). `Header.astro` conditionally renders `<img src={logoImage} alt="Saviacera" />` when set, otherwise falls back to text.
+
+Either works. Keep both code paths so it's an asset decision, not a code change.
+
+### Order of operations when building Decap
+
+1. **Wire GH→CF auto-deploy first** (ROADMAP P1). Without it Decap commits go nowhere visible.
+2. Create the GitHub OAuth App + the auth proxy (either via Cloudflare Pages Functions example or a hosted service).
+3. Add `public/admin/index.html` + `public/admin/config.yml` with the products collection only. Smoke-test add-a-product end to end.
+4. Add the `theme` collection + build wiring. Smoke-test font change end to end.
+5. (Optional) Put Cloudflare Access in front of `/admin/*` with magic-link to the owner's email.
+6. Onboard the owner: add as repo collaborator, send her the `/admin/` URL.
+7. Update CLAUDE.md + README.md to mark Decap as "active" (replacing "próximamente").
+
+### Coexistence with skills
+
+Both interfaces edit the same markdown files. The risk is concurrent edits to the same product — git pull-before-edit handles 99% of it, but practically the two humans should coordinate ("I'm editing the cart kit, hands off for 10 min"). Worth flagging in the wife-onboarding chat.
 
 ## Repo conventions
 

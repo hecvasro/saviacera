@@ -8,43 +8,48 @@ Producción: **https://saviacera.com**.
 
 ---
 
-## Administrar el sitio con Claude (sin código)
+## Administrar el sitio
 
-La forma más simple de actualizar el catálogo es **abrir Claude Code en esta carpeta y usar uno de los comandos que vienen abajo**. Claude te guía paso a paso, te hace las preguntas que necesita, y al final publica el cambio al sitio. Todo en español.
+Hay **dos formas** de actualizar el catálogo. La idea es que la dueña use el **panel web (Decap CMS)** cuando esté listo — abre un formulario en `saviacera.com/admin/`, llena los campos, le da a guardar y el sitio se actualiza solo. Mientras tanto, Hector puede usar **Claude Code** desde su computadora.
 
-### Comandos disponibles
+### Opción A — Panel web (Decap CMS) — *próximamente*
+
+> Esto todavía no está activo. Cuando esté listo, será la forma principal para que María administre el sitio sin instalar nada.
+
+- Entras a https://saviacera.com/admin/
+- Te pide login (con tu cuenta de GitHub o con un código que te llega por email, dependiendo de cómo lo configuremos).
+- Te aparece una lista de productos con un botón "Nuevo producto" y editar/borrar para los existentes.
+- Llenas el formulario (nombre, precio, foto, etc.), le das a "Publish" y listo — el sitio se actualiza solo en menos de un minuto.
+
+Status actual: planeado pero sin construir. Ver [ROADMAP.md](./ROADMAP.md) para cuándo se hace.
+
+### Opción B — Claude Code (para Hector, o como respaldo)
+
+Si Hector tiene Claude Code abierto en la carpeta del proyecto, puede usar estos comandos. Cada comando guía paso a paso, en español:
 
 | Comando              | Para qué                                                                 |
 | -------------------- | ------------------------------------------------------------------------ |
-| `/agregar-producto`  | Crear un producto nuevo (vela, jabón, o kit). Te pregunta nombre, precio, descripción, foto, etc. |
+| `/agregar-producto`  | Crear un producto nuevo (vela, jabón, o kit). Pregunta nombre, precio, descripción, foto, etc. |
 | `/editar-producto`   | Cambiar algo de un producto existente — precio, stock, descripción, orden, etc. |
 | `/actualizar-foto`   | Reemplazar o agregar la foto de un producto.                             |
 | `/borrar-producto`   | Despublicar (quitar del sitio) o eliminar un producto.                   |
-| `/cambiar-color`     | Cambiar colores, tipografías, o tamaños del tema visual del sitio.       |
+| `/cambiar-tema`      | Cambiar colores, tipografías (fuentes), o tamaños del tema visual del sitio. |
 | `/publicar`          | Publicar al sitio cualquier cambio pendiente que tengas guardado.        |
 
-### Cómo usarlos
+Para usarlos:
 
 1. Abrir Claude Code en la carpeta `saviacera`.
 2. Escribir el comando, ej. `/agregar-producto`.
-3. Responder las preguntas que Claude haga, una por una.
-4. Al final Claude te muestra el resultado y te pregunta si lo publicas — si dices sí, queda en línea en saviacera.com en menos de un minuto.
+3. Responder las preguntas que Claude hace, una por una.
+4. Al final Claude muestra el resultado y pregunta si publicar — si dices sí, queda en línea en saviacera.com en menos de un minuto.
 
-Si en cualquier momento no estás segura de algo, escribe **"explícame esto"** o **"no entiendo"** y Claude te responde sin tecnicismos.
+Si en cualquier momento no estás seguro de algo, escribe **"explícame esto"** o **"no entiendo"** y Claude responde sin tecnicismos.
 
-### Lo que necesitas en tu computadora (una sola vez)
-
-1. **Claude Code** instalado.
-2. La carpeta `saviacera` clonada del repositorio de GitHub (Hector te ayuda con esto la primera vez).
-3. Permisos para hacer `push` a GitHub (Hector configura tu llave SSH).
-
-No necesitas saber nada de programación. Lo único que tocarás es Claude, que te guía.
-
-### Si algo sale mal
+#### Si algo sale mal usando Claude
 
 - **"Me dio un error"** → cópialo y pásaselo a Claude tal cual. Casi siempre lo resuelve solo o te explica qué hacer.
 - **"Hice un cambio que no quería hacer"** → di "deshaz el último cambio" y Claude lo revierte.
-- **"Necesito algo que no está en la lista de comandos"** → escríbeselo en español tal como lo piensas. Claude entiende. Por ejemplo: "subí mal la foto del jabón, cámbiala por esta otra URL".
+- **"Necesito algo que no está en la lista de comandos"** → escríbelo en español tal como lo piensas. Claude entiende. Por ejemplo: "subí mal la foto del jabón, cámbiala por esta otra URL".
 
 ---
 
