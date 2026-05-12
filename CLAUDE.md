@@ -2,6 +2,15 @@
 
 Astro 5 + Tailwind v4 static site. Spanish (DR) primary, English wired up for later. Catalog + WhatsApp checkout (orders POST to a Google Apps Script Web App that appends to a sheet).
 
+**Docs map**:
+
+- [README.md](./README.md) — wife-facing how-to, in Spanish. Stack overview, "cómo agregar un producto", Apps Script + Sheet setup, etc.
+- [THEMING.md](./THEMING.md) — wife-facing theming guide, in Spanish.
+- [ROADMAP.md](./ROADMAP.md) — handoff doc: what's done, what's pending, what needs a decision. Read this first when picking up a session cold.
+- This file (CLAUDE.md) — technical/operating reference for Claude sessions: stack, deploy plumbing, credentials, conventions.
+
+**Long-term direction**: products are currently managed as markdown files (Astro content collections). The intent is to move to a **Google Sheets-backed CMS** so non-technical owners can manage the catalog without touching code. The schema in `src/content.config.ts` is already structured to map cleanly to spreadsheet columns. Design is not yet started; open questions captured in ROADMAP.md → "Long-term direction".
+
 ## Stack
 
 - Astro 5, static output (no SSR adapter). Build → `./dist/`.

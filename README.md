@@ -99,11 +99,35 @@ Comandos útiles:
 
 4. Reinicia `npm run dev` si recién creaste la carpeta del producto.
 
+### Cómo mover / reordenar un producto
+
+Cada producto tiene un campo `order` en su frontmatter:
+
+```yaml
+order: 20    # número entero. Menor = más arriba en la grilla.
+```
+
+Para mover una vela arriba de otra, baja su `order`. Si tienes dos productos con `order: 10` y `order: 20`, y quieres que un nuevo producto quede en medio, ponle `order: 15`. No hay que renumerar todo.
+
+El campo `featured: true` controla otra cosa distinta: si el producto aparece destacado en la home (`/`). Puedes tener varios productos destacados; entre ellos también respetan `order`.
+
 ### Categorías
+
+Las categorías activas hoy son tres y están "cableadas" en el código (cada una tiene su página propia y un valor permitido en el schema):
 
 - **velas** → aparecen en `/velas` (con filtro por tag).
 - **jabones** → aparecen en `/jabones`.
 - **kits** → aparecen en `/kits`. Los kits son productos normales: misma forma, sólo con `category: "kits"` y un tag de temporada (`san-valentin`, `dia-de-las-madres`, `dia-del-maestro`, `navidad`, `regalo`). El campo `includes` es una lista de strings — qué viene dentro del kit.
+
+#### Cómo agregar una categoría nueva
+
+Agregar una categoría completamente nueva (digamos `aceites`) requiere tres cambios pequeños en el código — no se puede hacer sólo desde un `.md`. Si quieres una categoría nueva, dímelo y la dejamos lista en un solo PR. Los tres cambios son:
+
+1. Añadir `"aceites"` al `z.enum([...])` en `src/content.config.ts`.
+2. Crear `src/pages/aceites.astro` (copiando `jabones.astro` como base y cambiando el filtro `category`).
+3. Agregar el link "Aceites" al menú en `src/components/Header.astro` y al footer en `src/components/Footer.astro`.
+
+Cuando exista el CMS de Google Sheets (ver "Futuro" abajo), agregar categorías será literalmente añadir una fila a una hoja — sin tocar código.
 
 ---
 
@@ -161,23 +185,38 @@ Lee **[THEMING.md](./THEMING.md)** — escrito para no-developers.
 
 ---
 
-## Despliegue (Cloudflare Pages — borrador)
+## Despliegue (Cloudflare Pages)
 
-Pendiente conectar. El plan:
+El sitio está en producción en **https://saviacera.com** (y `www.saviacera.com`). Hosting en Cloudflare Pages, proyecto `saviacera`. Los despliegues son manuales por ahora — un solo comando desde la terminal:
 
-1. Crear repositorio en GitHub y subir este proyecto.
-2. En Cloudflare → Pages → **Create a project** → conectar el repo.
-3. Ajustes de build:
-   - **Framework preset**: Astro
-   - **Build command**: `npm run build`
-   - **Build output directory**: `dist`
-   - **Node version**: `20` o superior
-4. Variables de entorno (Production y Preview):
-   - `PUBLIC_ORDER_ENDPOINT` → URL del Apps Script
-   - `PUBLIC_WHATSAPP_NUMBER` → número en formato dígitos
-5. Conectar el dominio `saviacera.do` (o el que se defina) en **Custom domains**.
+```bash
+npm run deploy
+```
 
-> El proyecto es estático (`output: "static"` por defecto en Astro), así que cualquier host estático funciona — Pages, Netlify, S3+CloudFront, etc.
+Eso corre `astro check && astro build` y luego sube `dist/` a Cloudflare. La nueva versión queda viva en `saviacera.com` en pocos segundos.
+
+También hay `npm run deploy:preview` que sube una versión a una URL `<hash>.saviacera.pages.dev` sin tocar la producción — útil para mostrarle algo a alguien sin publicarlo a todo el mundo.
+
+### Workflow para publicar cambios
+
+1. Editar lo que sea (un producto, el theme, un componente).
+2. `npm run dev` para verlo en local (`http://localhost:4321`).
+3. Cuando estés conforme: `npm run deploy`.
+4. Listo — saviacera.com sirve la nueva versión.
+
+Importante: las variables de entorno (Apps Script endpoint, número de WhatsApp) se leen del archivo `.env.local` **al momento del build**. Si cambias esos valores tienes que correr `npm run deploy` para que la producción los recoja.
+
+### Detalles técnicos
+
+Si necesitas tocar la infra (credenciales, dominio, scopes del token de Cloudflare), eso vive en [CLAUDE.md](./CLAUDE.md). El estado actual y lo que falta vive en [ROADMAP.md](./ROADMAP.md).
+
+---
+
+## Futuro — gestión de productos desde Google Sheets
+
+Hoy en día agregar un producto requiere editar un archivo Markdown y correr `npm run deploy`. Eso funciona, pero la idea a mediano plazo es que el catálogo se maneje desde **Google Sheets** (igual que ya hacemos con los pedidos), para que no haya que tocar código ni terminal cada vez.
+
+El plan está esbozado en [ROADMAP.md](./ROADMAP.md) → "Google Sheets-backed CMS". Mientras tanto el flujo actual (un `.md` por producto) sigue siendo la forma oficial de actualizar el catálogo.
 
 ---
 
