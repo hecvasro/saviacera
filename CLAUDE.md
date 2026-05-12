@@ -28,7 +28,7 @@ Apps Script source: `apps-script/Code.gs`. README has the sheet-setup steps.
 
 ## Deployment — Cloudflare Pages
 
-Hosted at **`saviacera.pages.dev`** (custom domain `saviacera.do` not yet wired). Pages project name: `saviacera`. Production branch: `main`. Cloudflare account: `hecvasro` (`75ec2b0c985f290ad848d43116bc32e7`).
+Production: **`https://saviacera.com`** (apex, canonical). Also serves at `https://www.saviacera.com`. Pages backend URL `saviacera.pages.dev` works too but isn't user-facing. Pages project name: `saviacera`. Production branch: `main`. Cloudflare account: `hecvasro` (`75ec2b0c985f290ad848d43116bc32e7`). Zone tag for `saviacera.com`: `e62d1de2811789a1d744737a22148b42`.
 
 ### Deploy commands
 
@@ -66,15 +66,57 @@ Deploy secrets are deliberately in `.envrc.local` (not `.env.local`) so they nev
 
 ### API token scopes (for rotation)
 
-Token created at https://dash.cloudflare.com/profile/api-tokens (Custom Token). Required scopes:
+Token lives at https://dash.cloudflare.com/profile/api-tokens (Custom Token). The single token in `.envrc.local` is the source of truth for both wrangler and any direct API calls (`curl`-based DNS / Pages / zone management). Required scopes by category:
 
-- Account → Cloudflare Pages → **Edit**
-- Account → Account Settings → **Read**
-- User → Memberships → **Read**
+**Minimum — wrangler auth + Pages deploy:**
 
-Optional (just makes `wrangler whoami` show your email): User → User Details → Read.
+- Account → Cloudflare Pages → **Edit** — create projects, deploy, attach custom domains.
+- Account → Account Settings → **Read** — lets wrangler resolve the account from `CLOUDFLARE_ACCOUNT_ID`.
+- User → Memberships → **Read** — lets `wrangler whoami` identify which account the user belongs to.
 
-Scope account resources to `hecvasro` only, not "All accounts".
+**Required for DNS / custom domain management:**
+
+- Zone → DNS → **Edit** — create CNAMEs for Pages custom domains, manage records.
+- Zone → Zone → **Read** — list zones, look up `zone_tag` for a given hostname. Without this, `GET /zones?name=...` silently returns an empty array instead of an auth error, which is misleading.
+
+**Optional:**
+
+- User → User Details → Read — only makes `wrangler whoami` show your email; cosmetic.
+
+**Resource scoping:**
+
+- Account resources: `Include → Specific account → hecvasro`, **not** "All accounts".
+- Zone resources: `Include → All zones from an account → hecvasro` is the simplest if you'll add more sites later. `Include → Specific zone → saviacera.com` is tighter if you want one-zone-per-token discipline.
+
+**Gotcha — API silently filters, doesn't always error.** If the token lacks a read scope, list endpoints like `GET /zones?name=foo.com` return `{"result": []}` with `"success": true`. Empty results from a Cloudflare API list call are ambiguous: could mean "doesn't exist" or "you can't see it." For verification, also check public DNS (`dig +short NS foo.com`) — if it resolves to `*.ns.cloudflare.com`, the zone exists on someone's CF account regardless of what your token can see.
+
+### Custom domains
+
+The `saviacera.com` zone is registered through Cloudflare Registrar, so DNS is fully on Cloudflare. Both apex and `www` are attached to the Pages project as CNAMEs (proxied / orange-cloud) pointing at `saviacera.pages.dev`. Cloudflare auto-issues + renews the TLS cert (currently Google CA, HTTP-01 validation).
+
+Apex CNAME flattening is handled transparently by Cloudflare — we set a CNAME at the apex via the API and CF serves it as A/AAAA at query time.
+
+**To attach a new custom domain** (e.g. a future subdomain):
+
+```sh
+# 1. Attach to the Pages project (Pages:Edit on token).
+direnv exec . sh -c 'curl -s -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"name\":\"sub.saviacera.com\"}" \
+  "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/saviacera/domains"'
+
+# 2. Create the DNS record (Zone:DNS:Edit on token).
+direnv exec . sh -c 'curl -s -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"type\":\"CNAME\",\"name\":\"sub\",\"content\":\"saviacera.pages.dev\",\"proxied\":true,\"ttl\":1}" \
+  "https://api.cloudflare.com/client/v4/zones/e62d1de2811789a1d744737a22148b42/dns_records"'
+
+# 3. Poll status until both validation_data.status and verification_data.status flip to "active":
+direnv exec . sh -c 'curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/saviacera/domains"'
+```
+
+Validation typically takes 30–180s end-to-end. Until Pages flips the domain to `active`, the edge serves HTTP 522 (Cloudflare doesn't know which Pages project to route the hostname to yet) — this is expected and clears on its own.
 
 ### Working from Claude Code (non-interactive shells)
 
