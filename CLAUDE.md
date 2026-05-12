@@ -9,7 +9,11 @@ Astro 5 + Tailwind v4 static site. Spanish (DR) primary, English wired up for la
 - [ROADMAP.md](./ROADMAP.md) — handoff doc: what's done, what's pending, what needs a decision. Read this first when picking up a session cold.
 - This file (CLAUDE.md) — technical/operating reference for Claude sessions: stack, deploy plumbing, credentials, conventions.
 
-**Long-term direction**: products are currently managed as markdown files (Astro content collections). The intent is to move to a **Google Sheets-backed CMS** so non-technical owners can manage the catalog without touching code. The schema in `src/content.config.ts` is already structured to map cleanly to spreadsheet columns. Design is not yet started; open questions captured in ROADMAP.md → "Long-term direction".
+**Content-management strategy**: products are markdown files (Astro content collections). The non-technical owner (Hector's wife) doesn't edit files directly — instead she **uses Claude Code as the interface**. Six project-local skills in `.claude/skills/` drive guided Q&A flows in Spanish for each common task (`/agregar-producto`, `/editar-producto`, `/borrar-producto`, `/actualizar-foto`, `/cambiar-color`, `/publicar`). When she's done with a task, the skill commits + pushes; Cloudflare Pages auto-deploys on push to `main` (see "Deployment" below). She never touches wrangler, the API token, or `.envrc.local`.
+
+**Alternative considered, not chosen**: Decap CMS (free static admin panel that commits to git). The schema in `src/content.config.ts` is intentionally Decap-friendly (flat scalars, simple arrays, no relations) so this remains a viable fallback if the Claude-as-interface approach doesn't fit. If Decap is added later, see "Alternative: Decap CMS path" below.
+
+**Long-term direction**: even simpler — products managed via **Google Sheets** with a build hook that pulls the sheet into the site. Design not started; open questions in ROADMAP.md → "Long-term direction".
 
 ## Stack
 
@@ -39,12 +43,39 @@ Apps Script source: `apps-script/Code.gs`. README has the sheet-setup steps.
 
 Production: **`https://saviacera.com`** (apex, canonical). Also serves at `https://www.saviacera.com`. Pages backend URL `saviacera.pages.dev` works too but isn't user-facing. Pages project name: `saviacera`. Production branch: `main`. Cloudflare account: `hecvasro` (`75ec2b0c985f290ad848d43116bc32e7`). Zone tag for `saviacera.com`: `e62d1de2811789a1d744737a22148b42`.
 
-### Deploy commands
+### Deploy modes (current state: manual direct-upload; auto-deploy pending)
 
-- `npm run deploy` — build + push to production. Updates `saviacera.pages.dev`.
+**Today (manual)**: deploys happen via wrangler direct upload from a machine with the API token loaded. Two npm scripts:
+
+- `npm run deploy` — build + push to production. Updates `saviacera.com`.
 - `npm run deploy:preview` — build + push as a preview. Gets its own `<hash>.saviacera.pages.dev` URL, does not move production.
 
-Both scripts call `wrangler pages deploy ./dist --project-name=saviacera` under the hood (with/without `--branch=main`).
+Both call `wrangler pages deploy ./dist --project-name=saviacera` under the hood.
+
+**Planned (GitHub → Cloudflare Pages auto-deploy)**: connect the GitHub repo to the Pages project so every push to `main` triggers a Cloudflare-side build + deploy. This is the target state — it unblocks the wife-facing workflow (she just pushes; no wrangler, no token, no direnv). Setup procedure below.
+
+### Setting up GitHub auto-deploy (one-time, user action)
+
+This step requires interactive OAuth in the dashboard (Cloudflare needs to authorize against GitHub), so it can't be done end-to-end via API token. Procedure:
+
+1. Cloudflare Dashboard → **Workers & Pages** → `saviacera` project → **Settings** → **Builds & deployments** → **Connect to Git**.
+2. Authorize Cloudflare's GitHub app against `hecvasro/saviacera`. Choose "Only select repositories" → `saviacera`.
+3. Configure the build:
+   - **Production branch**: `main`
+   - **Framework preset**: `Astro`
+   - **Build command**: `npm run build`
+   - **Build output directory**: `dist`
+   - **Root directory**: `/` (default)
+   - **Node version**: set via env var `NODE_VERSION=20` (or higher).
+4. Set production env vars (Settings → Environment variables, Production scope):
+   - `PUBLIC_ORDER_ENDPOINT` = the deployed Apps Script `/exec` URL
+   - `PUBLIC_WHATSAPP_NUMBER` = `18295286271` (or whatever the canonical number is)
+   - `NODE_VERSION` = `20`
+5. Save. The first auto-deploy fires on the next push to `main`.
+
+**Important**: once auto-deploy is active, `.env.local` is no longer the source of truth for production builds — the Cloudflare dashboard env vars are. Local `.env.local` only affects `npm run dev` / `npm run build` on Hector's machine. Keep them in sync manually, or trust the dashboard as canonical.
+
+**After this is set up**: the `npm run deploy` script becomes a fallback for emergency manual deploys. Day-to-day, push to `main` is the deploy.
 
 ### How credentials flow
 
@@ -137,6 +168,45 @@ direnv exec . npm run deploy
 ```
 
 `direnv exec . <cmd>` loads `.envrc` for that one command's environment, exits cleanly. This is the canonical pattern — don't try to hook direnv into `~/.zshenv` to "fix" it for non-interactive shells.
+
+## Content management — wife-facing skills
+
+Six project-local skills in `.claude/skills/` drive guided Spanish Q&A flows for catalog tasks. Each skill is a directory with a `SKILL.md`. They become invocable as slash commands (`/agregar-producto`, etc.) the moment a fresh Claude Code session opens this repo.
+
+| Slash command         | What it does                                                                 |
+| --------------------- | ---------------------------------------------------------------------------- |
+| `/agregar-producto`   | Guided creation of a new product `.md` file. Asks name, category, price, etc. in Spanish, validates each input, shows a preview, writes the file, and commits + pushes. |
+| `/editar-producto`    | Locate an existing product, ask what to change, apply via `Edit`, commit + push. |
+| `/borrar-producto`    | Offers two paths: despublish (`available: false`) or hard delete (`git rm`). Defaults to despublish. |
+| `/actualizar-foto`    | Replace, add, remove, or reorder the `images:` array on a product.            |
+| `/cambiar-color`      | Walk through a `src/styles/tokens.css` change (color, font, radius, spacing). Adds Google Fonts `<link>` to `BaseLayout.astro` when font changes. |
+| `/publicar`           | Inspect pending changes, commit, push. Fallback when a skill above left changes unpublished. |
+
+Each skill ends by pushing to `main`. Once GitHub auto-deploy is set up (see "Setting up GitHub auto-deploy" above), the push **is** the deploy. Until then, Hector still needs to run `npm run deploy` after the wife's skill-driven changes — the `publicar` skill has a note about that and reads CLAUDE.md to decide what message to show the user.
+
+**Skill design principles** (apply when adding or editing skills):
+
+- **One question at a time.** Never bundle ("name, price, category?") — easier to lose track and harder for non-technical users.
+- **Validate as you go.** Catch obvious errors (negative price, wrong category, malformed URL) immediately, with a friendly suggestion.
+- **Show a preview before writing.** The user should see the final frontmatter before any file is touched.
+- **Confirm before pushing.** Editing the file and pushing are two separate confirmation gates.
+- **Spanish, warm tone.** The audience is a small-business owner, not a developer. Avoid jargon; explain when you must.
+- **No surprise side effects.** Don't touch files outside the obvious scope. Don't reformat the whole frontmatter when only `priceDOP` changed — use `Edit` for the single field.
+
+When updating skills, keep the SKILL.md description tight (one sentence in Spanish, with verbs that match how the user might phrase the request — "agregar producto", "subir un jabón", "nuevo kit", etc.). The description is what Claude uses to decide which skill matches a freeform request.
+
+## Alternative: Decap CMS path (not active)
+
+The current direction is Claude-as-interface (skills above). If that ever feels wrong — e.g. the wife prefers a structured form over conversation, or there are multiple non-technical editors — Decap CMS is the documented fallback. Decap is a static admin panel that runs at `/admin/` and commits directly to the git repo. Free, no server, no DB.
+
+To enable Decap later:
+
+1. Install: `npm i -D decap-cms-app` (or use the CDN-hosted version — one HTML file).
+2. Create `public/admin/index.html` and `public/admin/config.yml`. The `config.yml` maps the Zod schema in `src/content.config.ts` to Decap's collection format. The schema was designed for this — flat scalars, simple arrays, no relations.
+3. Auth: GitHub OAuth via Cloudflare Pages Functions, or Netlify Identity (free), or the simpler "git-gateway" approach.
+4. Result: wife opens `https://saviacera.com/admin/`, logs in, fills a form per product. Decap commits to `main` → auto-deploy fires → site updates.
+
+The Claude-driven and Decap paths are **not mutually exclusive** — both edit the same markdown files. But running both invites confusion (which is canonical when they're edited in different ways minutes apart?), so commit to one.
 
 ## Repo conventions
 

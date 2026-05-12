@@ -8,10 +8,11 @@ Last updated: 2026-05-11.
 
 - **Code lives at** `github.com/hecvasro/saviacera` (private remote, branch `main`).
 - **Production site**: https://saviacera.com (apex canonical) and https://www.saviacera.com — both serve the live build with auto-issued certs.
-- **Hosting**: Cloudflare Pages, project `saviacera`, deployed via `wrangler pages deploy ./dist` (direct upload, no Pages-Git integration yet).
+- **Hosting**: Cloudflare Pages, project `saviacera`, deployed via `wrangler pages deploy ./dist` (direct upload). GitHub→CF auto-deploy is not yet wired (next priority).
 - **CI**: none. Deploys are manual via `npm run deploy` from a machine with the API token loaded.
 - **Content**: 3 example products in `src/content/products/` (all with picsum placeholder images).
 - **Order flow**: NOT YET FUNCTIONAL in production — see "Blocking production go-live" below.
+- **Wife-facing workflow**: six Spanish skills in `.claude/skills/` (`/agregar-producto`, `/editar-producto`, `/borrar-producto`, `/actualizar-foto`, `/cambiar-color`, `/publicar`) ready to use. Each skill ends by pushing to `main`. With auto-deploy not yet wired, Hector still has to run `npm run deploy` after the wife's pushes for changes to appear on the live site.
 
 ## Done
 
@@ -22,10 +23,35 @@ Last updated: 2026-05-11.
 - [x] `wrangler` installed as devDep, `npm run deploy` / `npm run deploy:preview` scripts.
 - [x] Cloudflare Pages project `saviacera` created, first deploy succeeded.
 - [x] Custom domain `saviacera.com` attached (apex + `www`), CNAMEs created in Cloudflare-managed zone, certs issued and active (commit `e1c0e57`).
+- [x] Wife-facing Spanish skills authored under `.claude/skills/`. CLAUDE.md documents skill design principles; README.md has a wife-facing "cómo administrar el sitio" section listing the slash commands.
 
 ## In-flight / decision needed
 
-### `www` → apex redirect (canonical hardening)
+### Priority 1 — GitHub → Cloudflare Pages auto-deploy (one-time setup)
+
+Once this is wired, `git push origin main` triggers a Cloudflare-side build + deploy, and the wife's skill workflow becomes truly end-to-end (no `npm run deploy` step needed). Until then, every wife-driven push still needs Hector to manually deploy.
+
+Requires interactive OAuth in the dashboard (Cloudflare authorizes against GitHub), can't be done via API token alone. Full procedure is in CLAUDE.md → "Setting up GitHub auto-deploy". Summary:
+
+1. Cloudflare Dashboard → `saviacera` Pages project → Settings → Builds & deployments → Connect to Git → authorize repo `hecvasro/saviacera`.
+2. Configure build: framework `Astro`, build command `npm run build`, output `dist`, branch `main`, `NODE_VERSION=20`.
+3. Set production env vars in the dashboard: `PUBLIC_ORDER_ENDPOINT`, `PUBLIC_WHATSAPP_NUMBER`, `NODE_VERSION`.
+
+**Caveat**: production env vars then live in the Cloudflare dashboard, not `.env.local`. Keep them in sync mentally or treat the dashboard as canonical for production builds.
+
+### Priority 2 — Wife setup (one-time per machine)
+
+For the wife to actually use the skills:
+
+1. Install Claude Code on her Mac.
+2. Generate an SSH key on her machine and add it to her GitHub account (or use Hector's account for git access — TBD).
+3. Grant her push access to `hecvasro/saviacera` (add as collaborator).
+4. Clone the repo to her machine.
+5. `npm install` (one time, so `npm run dev` works for local preview if she wants it).
+
+Once auto-deploy (P1) is wired, she does **not** need `.envrc.local`, the Cloudflare token, or wrangler. Just git access + Claude Code.
+
+### Priority 3 — `www` → apex redirect (canonical hardening)
 
 Both apex and www currently serve the same content with 200. For real SEO canonical behavior, www should 301 → apex. Three paths open (you picked apex as canonical, so direction is set; only the **mechanism** is undecided):
 
@@ -47,11 +73,7 @@ These need to be resolved before the site can actually take orders. Currently th
 
 ## Short-term backlog (after go-live)
 
-- [ ] **Real product photos** to replace `picsum.photos` placeholders. Upload to `src/assets/products/<slug>/` and reference as relative paths in each `.md`. Schema already supports both URL and local image refs.
-- [ ] **Decide on a content workflow for non-devs.** Right now adding a product requires editing markdown + running `npm run deploy`. Options:
-  - (a) Keep markdown, switch deploy to **GitHub-Cloudflare Pages integration** so any push to `main` auto-deploys. Wife needs git/markdown literacy or a web editor like GitHub web UI.
-  - (b) Add **Decap CMS** (free, runs as a static admin panel at `/admin`, commits to git). Schema in `src/content.config.ts` is already Decap-friendly.
-  - (c) Pursue the **Google Sheets CMS** plan directly (see "Long-term direction").
+- [ ] **Real product photos** to replace `picsum.photos` placeholders. Upload to `src/assets/products/<slug>/` and reference as relative paths in each `.md` (`/actualizar-foto` skill walks through this for the wife). Schema already supports both URL and local image refs.
 - [ ] **Sitemap + robots.txt**. Astro has `@astrojs/sitemap` integration — one-liner setup.
 - [ ] **Basic SEO**: per-page `<title>`/`<meta description>`/OG tags. `BaseLayout.astro` likely already takes a `title` prop; audit.
 - [ ] **Analytics**. Cloudflare Web Analytics (free, no cookie banner) is the lowest-friction option.
@@ -82,7 +104,9 @@ These can be designed when prioritized. None of this is blocking go-live.
 ## Operating notes for future Claude sessions
 
 - **Docs map**: this file (status), [CLAUDE.md](./CLAUDE.md) (technical/operating reference for future Claude sessions), [README.md](./README.md) (wife-facing, Spanish), [THEMING.md](./THEMING.md) (wife-facing theming, Spanish).
+- **Wife-facing skills** live in `.claude/skills/`. CLAUDE.md → "Content management — wife-facing skills" documents the design principles. When asked to add or change a skill, follow those principles (one question at a time, Spanish, validate as you go, preview before write, confirm before push).
 - **Credentials**: live in `.envrc.local` (gitignored). Run wrangler / Cloudflare API calls with `direnv exec .` prefix because the Bash tool is non-interactive. See CLAUDE.md → "Working from Claude Code".
 - **Token scope policy**: minimum required scopes for each operation listed in CLAUDE.md → "API token scopes". If a list endpoint returns empty + `success: true`, suspect missing read scope before concluding the resource doesn't exist.
 - **Commit identity**: `hecvasro <8771303+hecvasro@users.noreply.github.com>` — enforced by `~/.gitconfig` global, not repo-local.
 - **Don't deploy with `--commit-dirty=true`** unless you've checked the diff. Keeping the warning is the safer default.
+- **After GH auto-deploy is wired**: production env vars live in the Cloudflare dashboard, not `.env.local`. Don't assume `.env.local` reflects what's deployed.

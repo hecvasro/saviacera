@@ -4,6 +4,48 @@ Sitio web para Saviacera — velas de soya, jabones y kits artesanales hechos a 
 
 Stack: [Astro](https://astro.build) + TypeScript + [Tailwind CSS v4](https://tailwindcss.com). Catálogo en Markdown via Astro Content Collections (Zod). Sin pasarela de pagos: el "checkout" registra el pedido en una hoja de Google y abre WhatsApp con el resumen prellenado.
 
+Producción: **https://saviacera.com**.
+
+---
+
+## Administrar el sitio con Claude (sin código)
+
+La forma más simple de actualizar el catálogo es **abrir Claude Code en esta carpeta y usar uno de los comandos que vienen abajo**. Claude te guía paso a paso, te hace las preguntas que necesita, y al final publica el cambio al sitio. Todo en español.
+
+### Comandos disponibles
+
+| Comando              | Para qué                                                                 |
+| -------------------- | ------------------------------------------------------------------------ |
+| `/agregar-producto`  | Crear un producto nuevo (vela, jabón, o kit). Te pregunta nombre, precio, descripción, foto, etc. |
+| `/editar-producto`   | Cambiar algo de un producto existente — precio, stock, descripción, orden, etc. |
+| `/actualizar-foto`   | Reemplazar o agregar la foto de un producto.                             |
+| `/borrar-producto`   | Despublicar (quitar del sitio) o eliminar un producto.                   |
+| `/cambiar-color`     | Cambiar colores, tipografías, o tamaños del tema visual del sitio.       |
+| `/publicar`          | Publicar al sitio cualquier cambio pendiente que tengas guardado.        |
+
+### Cómo usarlos
+
+1. Abrir Claude Code en la carpeta `saviacera`.
+2. Escribir el comando, ej. `/agregar-producto`.
+3. Responder las preguntas que Claude haga, una por una.
+4. Al final Claude te muestra el resultado y te pregunta si lo publicas — si dices sí, queda en línea en saviacera.com en menos de un minuto.
+
+Si en cualquier momento no estás segura de algo, escribe **"explícame esto"** o **"no entiendo"** y Claude te responde sin tecnicismos.
+
+### Lo que necesitas en tu computadora (una sola vez)
+
+1. **Claude Code** instalado.
+2. La carpeta `saviacera` clonada del repositorio de GitHub (Hector te ayuda con esto la primera vez).
+3. Permisos para hacer `push` a GitHub (Hector configura tu llave SSH).
+
+No necesitas saber nada de programación. Lo único que tocarás es Claude, que te guía.
+
+### Si algo sale mal
+
+- **"Me dio un error"** → cópialo y pásaselo a Claude tal cual. Casi siempre lo resuelve solo o te explica qué hacer.
+- **"Hice un cambio que no quería hacer"** → di "deshaz el último cambio" y Claude lo revierte.
+- **"Necesito algo que no está en la lista de comandos"** → escríbeselo en español tal como lo piensas. Claude entiende. Por ejemplo: "subí mal la foto del jabón, cámbiala por esta otra URL".
+
 ---
 
 ## Desarrollo local

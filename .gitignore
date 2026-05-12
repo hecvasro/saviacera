@@ -33,6 +33,10 @@ coverage/
 push.command
 .push.log
 
+# Claude Code local settings (machine-specific permissions). Skills under
+# .claude/skills/ are shared and DO get committed.
+.claude/settings.local.json
+
 # Local Astro
 .netlify/
 .vercel/
