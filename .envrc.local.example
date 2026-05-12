@@ -1,0 +1,12 @@
+# Deploy-only secrets loaded by direnv (see .envrc).
+# Copy this file to `.envrc.local` and fill in real values, then `direnv allow`.
+#
+# These are intentionally NOT in .env.local because Vite/Astro would otherwise
+# load them into the build's import.meta.env. They should only live in the
+# shell environment for wrangler / deploy scripts.
+
+# Cloudflare API token with Pages:Edit + Account:Read scopes (see README).
+export CLOUDFLARE_API_TOKEN="REPLACE_ME"
+
+# Cloudflare account ID (dashboard sidebar → "Account ID").
+export CLOUDFLARE_ACCOUNT_ID="REPLACE_ME"

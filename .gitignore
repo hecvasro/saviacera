@@ -16,6 +16,7 @@ pnpm-debug.log*
 .env.local
 .env.development
 .env.production
+.envrc.local
 
 # Editors
 .vscode/
@@ -27,6 +28,10 @@ Thumbs.db
 *.tsbuildinfo
 .cache/
 coverage/
+
+# Local scaffolding-sandbox helpers (machine-specific, do not commit)
+push.command
+.push.log
 
 # Local Astro
 .netlify/

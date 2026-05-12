@@ -10,6 +10,8 @@
     "build": "astro check && astro build",
     "preview": "astro preview",
     "astro": "astro",
+    "deploy": "npm run build && wrangler pages deploy ./dist --project-name=saviacera --branch=main",
+    "deploy:preview": "npm run build && wrangler pages deploy ./dist --project-name=saviacera",
     "format": "prettier --write \"**/*.{astro,ts,tsx,js,jsx,md,css,json}\"",
     "format:check": "prettier --check \"**/*.{astro,ts,tsx,js,jsx,md,css,json}\"",
     "lint": "eslint \"src/**/*.{ts,tsx,astro}\""
@@ -21,13 +23,14 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
-    "tailwindcss": "^4.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.11.0",
+    "@typescript-eslint/parser": "^8.11.0",
     "eslint": "^9.13.0",
     "eslint-plugin-astro": "^1.3.0",
-    "@typescript-eslint/parser": "^8.11.0",
-    "@typescript-eslint/eslint-plugin": "^8.11.0",
     "prettier": "^3.3.3",
-    "prettier-plugin-astro": "^0.14.1"
+    "prettier-plugin-astro": "^0.14.1",
+    "tailwindcss": "^4.0.0",
+    "wrangler": "^4.90.0"
   },
   "engines": {
     "node": ">=20.0.0"
