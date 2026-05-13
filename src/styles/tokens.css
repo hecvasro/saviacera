@@ -18,12 +18,12 @@
    * Brand palette — derived from the Saviacera logo (sage #b8c49d on cream)
    * ------------------------------------------------------------------------ */
 
-  /* Page background — warm cream */
-  --color-background: #faf7f1;
+  /* Page background — cool ivory */
+  --color-background: #f6f4ed;
   /* Card / surface — pure white for product cards */
   --color-surface: #ffffff;
-  /* Soft cream variant — section bands, chips, hover states */
-  --color-surface-muted: #f3eee2;
+  /* Soft pale sage — section bands, hover states */
+  --color-surface-muted: #e6ebd9;
   /* Subtle borders & dividers — warm cream-gray */
   --color-border: #e8e3d8;
 
@@ -34,12 +34,12 @@
 
   /* Primary — sage green from the logo. Header band, outlined buttons. */
   --color-primary: #b8c49d;
-  --color-primary-hover: #a8b58a;
+  --color-primary-hover: #a5b389;
   --color-primary-contrast: #ffffff;
 
-  /* Accent — terracotta. Primary CTAs, links, highlights. */
-  --color-accent: #c87a55;
-  --color-accent-hover: #b56a48;
+  /* Accent — muted olive-gold. Primary CTAs, links, highlights. */
+  --color-accent: #a5926a;
+  --color-accent-hover: #8d7c5a;
   --color-accent-contrast: #ffffff;
 
   /* Legacy alias — kept so existing `.chip` / `bg-beige` references keep
