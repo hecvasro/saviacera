@@ -136,18 +136,24 @@ const categoryLabel: Record<string, string> = {
 <script>
   import { addToCart } from "~/lib/cart";
 
+  // Idempotent: View Transitions fires astro:page-load on every navigation
+  // (including initial load), and inline scripts also run at parse time.
+  // The dataset.bound guard prevents attaching duplicate click listeners,
+  // which previously caused "Agregar al carrito" to add 2 items per click
+  // on the first visited product page.
   function bind() {
-    // Thumbnails swap the main image.
     document.querySelectorAll<HTMLButtonElement>("[data-thumb]").forEach((btn) => {
+      if (btn.dataset.bound === "1") return;
+      btn.dataset.bound = "1";
       btn.addEventListener("click", () => {
         const main = document.getElementById("pdp-main-image") as HTMLImageElement | null;
         if (main && btn.dataset.src) main.src = btn.dataset.src;
       });
     });
 
-    // Add to cart button.
     const addBtn = document.querySelector<HTMLButtonElement>("[data-add-to-cart]");
-    if (addBtn) {
+    if (addBtn && addBtn.dataset.bound !== "1") {
+      addBtn.dataset.bound = "1";
       addBtn.addEventListener("click", () => {
         const slug = addBtn.dataset.slug || "";
         const name = addBtn.dataset.name || "";

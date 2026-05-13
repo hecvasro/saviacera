@@ -108,8 +108,18 @@ import BaseLayout from "~/layouts/BaseLayout.astro";
     subtotalEl.textContent = formatDOP(getSubtotal());
   }
 
+  // Idempotent so calling from both parse-time and astro:page-load (and on
+  // every subsequent view-transition navigation back to this page) attaches
+  // the listeners exactly once. Previously these were attached to document.body
+  // on parse only — when the user navigated away and back via View Transitions,
+  // the cached module didn't re-execute, so inc/dec/remove/checkout buttons
+  // appeared dead.
+  let bound = false;
   function bind() {
-    document.body.addEventListener("click", (e) => {
+    if (bound) return;
+    bound = true;
+
+    document.addEventListener("click", (e) => {
       const t = e.target as HTMLElement;
 
       const inc = t.closest<HTMLButtonElement>("[data-inc]");
@@ -161,5 +171,6 @@ import BaseLayout from "~/layouts/BaseLayout.astro";
   bind();
   document.addEventListener("astro:page-load", () => {
     render();
+    bind();
   });
 </script>
