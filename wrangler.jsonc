@@ -1,0 +1,12 @@
+// Cloudflare Workers Static Assets config for saviacera.
+// `wrangler deploy` reads this and uploads ./dist as a static-assets-only Worker.
+// No `main` field: there is no server-side handler, all routes serve from ./dist.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "saviacera",
+  "compatibility_date": "2026-05-12",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page"
+  }
+}

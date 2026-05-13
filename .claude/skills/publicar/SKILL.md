@@ -32,7 +32,7 @@ Si hay commits locales pero ya estaban hechos (caso después de skills anteriore
 
 ## Paso 4 — Confirmar el deploy
 
-Decir: "Cambios publicados. Cloudflare Pages está desplegando el sitio — debería estar en línea en https://saviacera.com en 30 segundos a 1 minuto."
+Decir: "Cambios publicados. Cloudflare está desplegando el sitio — debería estar en línea en https://saviacera.com en 30 segundos a 1 minuto."
 
 Si el push falla por algún motivo (conflicto con remoto, autenticación, etc.), explicar el error en lenguaje claro y sugerir el próximo paso:
 - Si es conflicto: "Alguien hizo cambios en el repo desde la última vez. Corre `git pull origin main` antes de pushear de nuevo. Si te pide resolver algo, mejor llama a Hector."
@@ -40,6 +40,6 @@ Si el push falla por algún motivo (conflicto con remoto, autenticación, etc.),
 
 ## Variables importantes
 
-Este skill asume que el repositorio está conectado a Cloudflare Pages con auto-deploy desde la rama `main`. Si **no** está conectado todavía, decir al final: "El push fue exitoso pero todavía no tenemos auto-deploy configurado. Hector tiene que correr `npm run deploy` para que el sitio se actualice."
+Este skill asume que el repositorio está conectado a Cloudflare Workers Builds con auto-deploy desde la rama `main`. Si **no** está conectado todavía, decir al final: "El push fue exitoso pero todavía no tenemos auto-deploy configurado. Hector tiene que correr `npm run deploy` para que el sitio se actualice."
 
 Para saber si el auto-deploy está configurado, leer `CLAUDE.md` → sección "Deployment". Si dice que el auto-deploy está activo, todo en automático; si dice que sigue manual, avisar como arriba.

@@ -40,41 +40,54 @@ Public site env lives in `.env.local` (gitignored). Template in `.env.example`. 
 
 Apps Script source: `apps-script/Code.gs`. README has the sheet-setup steps.
 
-## Deployment — Cloudflare Pages
+## Deployment — Cloudflare Workers Static Assets
 
-Production: **`https://saviacera.com`** (apex, canonical). Also serves at `https://www.saviacera.com`. Pages backend URL `saviacera.pages.dev` works too but isn't user-facing. Pages project name: `saviacera`. Production branch: `main`. Cloudflare account: `hecvasro` (`75ec2b0c985f290ad848d43116bc32e7`). Zone tag for `saviacera.com`: `e62d1de2811789a1d744737a22148b42`.
+Production: **`https://saviacera.com`** (apex, canonical). Also serves at `https://www.saviacera.com`. The Workers default `saviacera.<account-subdomain>.workers.dev` URL works too but isn't user-facing. Worker name: `saviacera`. Production branch: `main`. Cloudflare account: `hecvasro` (`75ec2b0c985f290ad848d43116bc32e7`). Zone tag for `saviacera.com`: `e62d1de2811789a1d744737a22148b42`.
 
-### Deploy modes (current state: manual direct-upload; auto-deploy pending)
+The deploy target is **Workers Static Assets**, not Cloudflare Pages. The site is purely static (`./dist` from `astro build`), so there's no `main` worker script — `wrangler.jsonc` only declares the assets binding. Configuration:
 
-**Today (manual)**: deploys happen via wrangler direct upload from a machine with the API token loaded. Two npm scripts:
+```jsonc
+{
+  "name": "saviacera",
+  "compatibility_date": "2026-05-12",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page"
+  }
+}
+```
+
+### Deploy modes (current state: manual via wrangler; auto-deploy via Workers Builds pending)
+
+**Today (manual)**: deploys happen via `wrangler deploy` from a machine with the API token loaded. Two npm scripts:
 
 - `npm run deploy` — build + push to production. Updates `saviacera.com`.
-- `npm run deploy:preview` — build + push as a preview. Gets its own `<hash>.saviacera.pages.dev` URL, does not move production.
+- `npm run deploy:preview` — build + upload a new Worker **version** without promoting it to production (`wrangler versions upload`). Returns a preview URL for that version; production is unaffected until you `wrangler versions deploy` it.
 
-Both call `wrangler pages deploy ./dist --project-name=saviacera` under the hood.
+Both run `astro check && astro build` first, then the wrangler step reads `wrangler.jsonc` and uploads `./dist`.
 
-**Planned (GitHub → Cloudflare Pages auto-deploy)**: connect the GitHub repo to the Pages project so every push to `main` triggers a Cloudflare-side build + deploy. This is the target state — it unblocks the wife-facing workflow (she just pushes; no wrangler, no token, no direnv). Setup procedure below.
+**Planned (GitHub → Workers Builds auto-deploy)**: connect the GitHub repo to the Worker so every push to `main` triggers a Cloudflare-side build + deploy. This is the target state — it unblocks the wife-facing workflow (she just pushes; no wrangler, no token, no direnv). Setup procedure below.
 
 ### Setting up GitHub auto-deploy (one-time, user action)
 
-This step requires interactive OAuth in the dashboard (Cloudflare needs to authorize against GitHub), so it can't be done end-to-end via API token. Procedure:
+Done from the modern unified **Workers & Pages → saviacera → Settings → Builds** UI. Procedure:
 
-1. Cloudflare Dashboard → **Workers & Pages** → `saviacera` project → **Settings** → **Builds & deployments** → **Connect to Git**.
+1. Cloudflare Dashboard → **Workers & Pages** → `saviacera` Worker → **Settings** → **Builds** → **Connect**.
 2. Authorize Cloudflare's GitHub app against `hecvasro/saviacera`. Choose "Only select repositories" → `saviacera`.
 3. Configure the build:
    - **Production branch**: `main`
-   - **Framework preset**: `Astro`
    - **Build command**: `npm run build`
-   - **Build output directory**: `dist`
+   - **Deploy command**: `npx wrangler deploy` (the dashboard usually fills this in from `wrangler.jsonc`)
    - **Root directory**: `/` (default)
    - **Node version**: set via env var `NODE_VERSION=20` (or higher).
-4. Set production env vars (Settings → Environment variables, Production scope):
+4. Set production build vars (Settings → Variables and Secrets / Build):
    - `PUBLIC_ORDER_ENDPOINT` = the deployed Apps Script `/exec` URL
    - `PUBLIC_WHATSAPP_NUMBER` = `18295286271` (or whatever the canonical number is)
    - `NODE_VERSION` = `20`
+   These must be **build-time vars** (visible to `astro build`), not Worker runtime secrets, because `PUBLIC_*` is baked in at build time.
 5. Save. The first auto-deploy fires on the next push to `main`.
 
-**Important**: once auto-deploy is active, `.env.local` is no longer the source of truth for production builds — the Cloudflare dashboard env vars are. Local `.env.local` only affects `npm run dev` / `npm run build` on Hector's machine. Keep them in sync manually, or trust the dashboard as canonical.
+**Important**: once auto-deploy is active, `.env.local` is no longer the source of truth for production builds — the Cloudflare dashboard build vars are. Local `.env.local` only affects `npm run dev` / `npm run build` on Hector's machine. Keep them in sync manually, or trust the dashboard as canonical.
 
 **After this is set up**: the `npm run deploy` script becomes a fallback for emergency manual deploys. Day-to-day, push to `main` is the deploy.
 
@@ -109,15 +122,18 @@ Deploy secrets are deliberately in `.envrc.local` (not `.env.local`) so they nev
 
 Token lives at https://dash.cloudflare.com/profile/api-tokens (Custom Token). The single token in `.envrc.local` is the source of truth for both wrangler and any direct API calls (`curl`-based DNS / Pages / zone management). Required scopes by category:
 
-**Minimum — wrangler auth + Pages deploy:**
+**Minimum — wrangler auth + Workers Static Assets deploy:**
 
-- Account → Cloudflare Pages → **Edit** — create projects, deploy, attach custom domains.
+- Account → Workers Scripts → **Edit** — deploy the Worker (assets-only), upload new versions.
 - Account → Account Settings → **Read** — lets wrangler resolve the account from `CLOUDFLARE_ACCOUNT_ID`.
 - User → Memberships → **Read** — lets `wrangler whoami` identify which account the user belongs to.
 
+Legacy: the previous Pages-based setup also relied on `Account → Cloudflare Pages → Edit`. Now that deploy is via Workers, that scope is no longer required by the day-to-day deploy flow, but keeping it on the token lets you still manage the old Pages project (e.g. to detach Pages-side custom domains during the migration).
+
 **Required for DNS / custom domain management:**
 
-- Zone → DNS → **Edit** — create CNAMEs for Pages custom domains, manage records.
+- Zone → DNS → **Edit** — manage DNS records in the `saviacera.com` zone. Note: Workers Custom Domains create their own DNS records automatically, so this scope is no longer load-bearing for routine custom-domain attachment, but it's still useful for ad-hoc records and for cleaning up CNAMEs left over from the Pages-era setup.
+- Zone → Workers → **Edit** — required to attach a Worker Custom Domain via the API (the dashboard flow doesn't need this scope; only scripted attachment does).
 - Zone → Zone → **Read** — list zones, look up `zone_tag` for a given hostname. Without this, `GET /zones?name=...` silently returns an empty array instead of an auth error, which is misleading.
 
 **Optional:**
@@ -133,31 +149,25 @@ Token lives at https://dash.cloudflare.com/profile/api-tokens (Custom Token). Th
 
 ### Custom domains
 
-The `saviacera.com` zone is registered through Cloudflare Registrar, so DNS is fully on Cloudflare. Both apex and `www` are attached to the Pages project as CNAMEs (proxied / orange-cloud) pointing at `saviacera.pages.dev`. Cloudflare auto-issues + renews the TLS cert (currently Google CA, HTTP-01 validation).
+The `saviacera.com` zone is registered through Cloudflare Registrar, so DNS is fully on Cloudflare. Both apex and `www` serve the live site with auto-issued/auto-renewed TLS certs (currently Google CA, HTTP-01 validation).
 
-Apex CNAME flattening is handled transparently by Cloudflare — we set a CNAME at the apex via the API and CF serves it as A/AAAA at query time.
+**Migration note (Pages → Workers Static Assets)**: under the old Pages setup the apex and `www` were attached as Pages custom domains with CNAMEs pointing at `saviacera.pages.dev`. After switching the deploy to Workers Static Assets (this commit), the existing Pages-side attachments need to be re-pointed at the Worker. The simplest path: in the dashboard, **Workers & Pages → saviacera (Worker) → Settings → Domains & Routes → Add Custom Domain** for both `saviacera.com` and `www.saviacera.com`. Cloudflare manages the underlying DNS records automatically for Workers Custom Domains — you don't create CNAMEs manually like with Pages. The TLS cert provisions on its own. While both old (Pages) and new (Worker) attachments exist simultaneously, traffic routes to whichever Cloudflare resolves first; remove the Pages attachments once the Worker ones go active.
 
-**To attach a new custom domain** (e.g. a future subdomain):
+**To attach a new custom domain post-migration** (e.g. a future subdomain):
 
 ```sh
-# 1. Attach to the Pages project (Pages:Edit on token).
-direnv exec . sh -c 'curl -s -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+# Workers Custom Domains: one API call. Cloudflare creates the DNS automatically.
+# Requires Account → Workers Scripts → Edit and Zone → Workers → Edit on the token
+# (a superset of what we have today — token scopes will need a refresh).
+direnv exec . sh -c 'curl -s -X PUT -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"name\":\"sub.saviacera.com\"}" \
-  "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/saviacera/domains"'
-
-# 2. Create the DNS record (Zone:DNS:Edit on token).
-direnv exec . sh -c 'curl -s -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d "{\"type\":\"CNAME\",\"name\":\"sub\",\"content\":\"saviacera.pages.dev\",\"proxied\":true,\"ttl\":1}" \
-  "https://api.cloudflare.com/client/v4/zones/e62d1de2811789a1d744737a22148b42/dns_records"'
-
-# 3. Poll status until both validation_data.status and verification_data.status flip to "active":
-direnv exec . sh -c 'curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-  "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/saviacera/domains"'
+  -d "{\"environment\":\"production\",\"hostname\":\"sub.saviacera.com\",\"service\":\"saviacera\",\"zone_id\":\"e62d1de2811789a1d744737a22148b42\"}" \
+  "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains"'
 ```
 
-Validation typically takes 30–180s end-to-end. Until Pages flips the domain to `active`, the edge serves HTTP 522 (Cloudflare doesn't know which Pages project to route the hostname to yet) — this is expected and clears on its own.
+Alternatively the modern declarative form is to add `routes` or `workers_custom_domains` entries in `wrangler.jsonc` and let `wrangler deploy` reconcile them. Either works; dashboard is simplest for one-off subdomains.
+
+Validation typically takes 30–180s end-to-end. Until the hostname flips to `active`, the edge may serve HTTP 522 — expected, clears on its own.
 
 ### Working from Claude Code (non-interactive shells)
 

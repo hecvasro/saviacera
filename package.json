@@ -10,8 +10,8 @@
     "build": "astro check && astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "deploy": "npm run build && wrangler pages deploy ./dist --project-name=saviacera --branch=main",
-    "deploy:preview": "npm run build && wrangler pages deploy ./dist --project-name=saviacera",
+    "deploy": "npm run build && wrangler deploy",
+    "deploy:preview": "npm run build && wrangler versions upload",
     "format": "prettier --write \"**/*.{astro,ts,tsx,js,jsx,md,css,json}\"",
     "format:check": "prettier --check \"**/*.{astro,ts,tsx,js,jsx,md,css,json}\"",
     "lint": "eslint \"src/**/*.{ts,tsx,astro}\""

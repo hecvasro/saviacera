@@ -8,7 +8,7 @@ Last updated: 2026-05-11.
 
 - **Code lives at** `github.com/hecvasro/saviacera` (private remote, branch `main`).
 - **Production site**: https://saviacera.com (apex canonical) and https://www.saviacera.com — both serve the live build with auto-issued certs.
-- **Hosting**: Cloudflare Pages, project `saviacera`, deployed via `wrangler pages deploy ./dist` (direct upload). GitHub→CF auto-deploy is not yet wired (next priority).
+- **Hosting**: Cloudflare Workers Static Assets, Worker name `saviacera`, configured by `wrangler.jsonc`, deployed via `wrangler deploy`. (Migrated off Cloudflare Pages on 2026-05-12.) GitHub→CF auto-deploy is not yet wired (next priority).
 - **CI**: none. Deploys are manual via `npm run deploy` from a machine with the API token loaded.
 - **Content**: 3 example products in `src/content/products/` (all with picsum placeholder images).
 - **Order flow**: NOT YET FUNCTIONAL in production — see "Blocking production go-live" below.
@@ -30,17 +30,18 @@ Last updated: 2026-05-11.
 
 ## In-flight / decision needed
 
-### Priority 1 — GitHub → Cloudflare Pages auto-deploy (one-time setup)
+### Priority 1 — GitHub → Cloudflare Workers Builds auto-deploy (one-time setup)
 
-Once this is wired, `git push origin main` triggers a Cloudflare-side build + deploy, and the wife's skill workflow becomes truly end-to-end (no `npm run deploy` step needed). Until then, every wife-driven push still needs Hector to manually deploy.
+Once this is wired, `git push origin main` triggers a Cloudflare-side build + `wrangler deploy`, and the wife's skill workflow becomes truly end-to-end (no `npm run deploy` step needed). Until then, every wife-driven push still needs Hector to manually deploy.
 
-Requires interactive OAuth in the dashboard (Cloudflare authorizes against GitHub), can't be done via API token alone. Full procedure is in CLAUDE.md → "Setting up GitHub auto-deploy". Summary:
+Now that the project is on **Workers Static Assets** (not Pages), this is configured from the unified **Workers & Pages → saviacera Worker → Settings → Builds** UI rather than the old Pages-only flow. The old caveat that this "must be done via Pages dashboard OAuth and can't be scripted" is no longer relevant — Workers Builds is the same unified surface, and `wrangler.jsonc` declares the build target, so config drift between the dashboard and the repo is minimized. Full procedure is in CLAUDE.md → "Setting up GitHub auto-deploy". Summary:
 
-1. Cloudflare Dashboard → `saviacera` Pages project → Settings → Builds & deployments → Connect to Git → authorize repo `hecvasro/saviacera`.
-2. Configure build: framework `Astro`, build command `npm run build`, output `dist`, branch `main`, `NODE_VERSION=20`.
-3. Set production env vars in the dashboard: `PUBLIC_ORDER_ENDPOINT`, `PUBLIC_WHATSAPP_NUMBER`, `NODE_VERSION`.
+1. Cloudflare Dashboard → `saviacera` Worker → Settings → Builds → Connect → authorize repo `hecvasro/saviacera`.
+2. Configure build: build command `npm run build`, deploy command `npx wrangler deploy` (auto-filled from `wrangler.jsonc`), branch `main`, `NODE_VERSION=20`.
+3. Set production **build** vars in the dashboard: `PUBLIC_ORDER_ENDPOINT`, `PUBLIC_WHATSAPP_NUMBER`, `NODE_VERSION`. (Build vars, not runtime secrets — `PUBLIC_*` is baked in at `astro build` time.)
+4. Re-attach the custom domains (`saviacera.com`, `www.saviacera.com`) to the new Worker via Settings → Domains & Routes → Add Custom Domain. The Pages-side attachments can then be removed.
 
-**Caveat**: production env vars then live in the Cloudflare dashboard, not `.env.local`. Keep them in sync mentally or treat the dashboard as canonical for production builds.
+**Caveat**: production build vars then live in the Cloudflare dashboard, not `.env.local`. Keep them in sync mentally or treat the dashboard as canonical for production builds.
 
 ### Priority 2 — Build Decap CMS
 

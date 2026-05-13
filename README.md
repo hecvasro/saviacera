@@ -232,17 +232,17 @@ Lee **[THEMING.md](./THEMING.md)** — escrito para no-developers.
 
 ---
 
-## Despliegue (Cloudflare Pages)
+## Despliegue (Cloudflare Workers Static Assets)
 
-El sitio está en producción en **https://saviacera.com** (y `www.saviacera.com`). Hosting en Cloudflare Pages, proyecto `saviacera`. Los despliegues son manuales por ahora — un solo comando desde la terminal:
+El sitio está en producción en **https://saviacera.com** (y `www.saviacera.com`). Hosting en **Cloudflare Workers Static Assets** (Worker `saviacera`, configurado en `wrangler.jsonc`). Los despliegues son manuales por ahora — un solo comando desde la terminal:
 
 ```bash
 npm run deploy
 ```
 
-Eso corre `astro check && astro build` y luego sube `dist/` a Cloudflare. La nueva versión queda viva en `saviacera.com` en pocos segundos.
+Eso corre `astro check && astro build` y luego `wrangler deploy`, que sube `dist/` como assets del Worker. La nueva versión queda viva en `saviacera.com` en pocos segundos.
 
-También hay `npm run deploy:preview` que sube una versión a una URL `<hash>.saviacera.pages.dev` sin tocar la producción — útil para mostrarle algo a alguien sin publicarlo a todo el mundo.
+También hay `npm run deploy:preview` que sube una nueva *version* del Worker sin promoverla a producción (`wrangler versions upload`) — útil para mostrarle algo a alguien sin tocar la versión que sirve `saviacera.com`.
 
 ### Workflow para publicar cambios
 
