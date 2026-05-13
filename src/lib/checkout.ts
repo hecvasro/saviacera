@@ -64,7 +64,6 @@ function buildWhatsappMessage(payload: OrderPayload): string {
   lines.push("Quiero confirmar este pedido.");
   lines.push("");
   lines.push(`*Pedido:* ${payload.orderId}`);
-  lines.push("");
   lines.push("*Artículos:*");
   for (const it of payload.items) {
     lines.push(`• ${it.qty} × ${it.name} — ${formatDOP(it.lineTotal)}`);
