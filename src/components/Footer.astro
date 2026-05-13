@@ -6,10 +6,20 @@ const whatsappDigits = import.meta.env.PUBLIC_WHATSAPP_NUMBER;
 <footer class="mt-24 border-t border-border bg-surface-muted">
   <div class="container-page py-10 grid gap-6 md:grid-cols-3 text-sm text-muted">
     <div>
-      <p class="font-display text-2xl text-foreground tracking-tight">
-        Saviacera
-      </p>
-      <p class="mt-2 max-w-xs">
+      <span
+        class="inline-flex items-center bg-primary rounded-md px-4 py-2"
+        aria-hidden="true"
+      >
+        <img
+          src="/logo.png"
+          alt=""
+          class="h-8 md:h-10 w-auto block"
+          decoding="async"
+          loading="lazy"
+        />
+      </span>
+      <span class="sr-only">Saviacera</span>
+      <p class="mt-3 max-w-xs">
         Velas de soya, jabones y kits artesanales hechos a mano en República
         Dominicana.
       </p>
