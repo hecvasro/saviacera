@@ -15,31 +15,37 @@
 
 :root {
   /* --------------------------------------------------------------------------
-   * Brand palette (placeholder — warm soy-candle inspired)
+   * Brand palette — derived from the Saviacera logo (sage #b8c49d on cream)
    * ------------------------------------------------------------------------ */
 
-  /* Page background — warm ivory */
-  --color-background: oklch(97% 0.018 75);
-  /* Card / surface — slightly warmer cream */
-  --color-surface: oklch(94% 0.025 75);
-  /* Subtle borders & dividers */
-  --color-border: oklch(86% 0.025 70);
+  /* Page background — warm cream */
+  --color-background: #faf7f1;
+  /* Card / surface — pure white for product cards */
+  --color-surface: #ffffff;
+  /* Soft cream variant — section bands, chips, hover states */
+  --color-surface-muted: #f3eee2;
+  /* Subtle borders & dividers — warm cream-gray */
+  --color-border: #e8e3d8;
 
-  /* Body text — deep brown */
-  --color-text: oklch(28% 0.04 50);
-  /* Secondary text — muted brown */
-  --color-text-muted: oklch(50% 0.03 50);
+  /* Body text — deep ink */
+  --color-text: #2c2a26;
+  /* Secondary text — warm gray */
+  --color-text-muted: #6b665d;
 
-  /* Accent — terracotta (CTAs, highlights, links) */
-  --color-accent: oklch(62% 0.135 40);
-  /* Accent hover — slightly darker */
-  --color-accent-hover: oklch(56% 0.135 40);
-  /* Text/icon color when placed on accent backgrounds */
-  --color-accent-contrast: oklch(98% 0.015 80);
+  /* Primary — sage green from the logo. Header band, outlined buttons. */
+  --color-primary: #b8c49d;
+  --color-primary-hover: #a8b58a;
+  --color-primary-contrast: #ffffff;
 
-  /* Secondary brand swatch — warm beige (badges, chips, soft surfaces) */
-  --color-beige: oklch(89% 0.035 80);
-  --color-beige-contrast: oklch(28% 0.04 50);
+  /* Accent — terracotta. Primary CTAs, links, highlights. */
+  --color-accent: #c87a55;
+  --color-accent-hover: #b56a48;
+  --color-accent-contrast: #ffffff;
+
+  /* Legacy alias — kept so existing `.chip` / `bg-beige` references keep
+   * working. Same value as surface-muted; prefer surface-muted for new code. */
+  --color-beige: #f3eee2;
+  --color-beige-contrast: #2c2a26;
 
   /* Status */
   --color-success: oklch(60% 0.12 145);
@@ -49,10 +55,10 @@
    * Typography
    * ------------------------------------------------------------------------ */
 
-  --font-display: "Cormorant Garamond", "Playfair Display", Georgia, serif;
+  --font-display: "Cormorant Garamond", Georgia, serif;
   --font-body:
-    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
 
   /* --------------------------------------------------------------------------
    * Radii

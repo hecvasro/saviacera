@@ -7,11 +7,21 @@ const navItems = [
 ];
 ---
 
-<header class="border-b border-border bg-background/80 backdrop-blur sticky top-0 z-30">
-  <div class="container-page flex items-center justify-between py-4">
-    <a href="/" class="font-display text-2xl tracking-tight">Saviacera</a>
+<header class="bg-primary sticky top-0 z-30">
+  <div class="container-page flex items-center justify-between gap-4 py-3">
+    <a href="/" class="flex items-center" aria-label="Saviacera — inicio">
+      <img
+        src="/logo.svg"
+        alt="Saviacera"
+        class="h-9 md:h-12 w-auto block"
+        width="432"
+        height="216"
+      />
+    </a>
 
-    <nav class="hidden md:flex items-center gap-8 text-sm">
+    <nav
+      class="hidden md:flex items-center gap-8 text-sm text-primary-contrast"
+    >
       {
         navItems.map((item) => {
           const active = pathname.startsWith(item.href);
@@ -19,8 +29,8 @@ const navItems = [
             <a
               href={item.href}
               class:list={[
-                "transition-colors hover:text-accent",
-                active ? "text-accent" : "text-foreground",
+                "transition-opacity hover:opacity-70",
+                active ? "opacity-100 font-medium" : "opacity-90",
               ]}
             >
               {item.label}
@@ -32,7 +42,7 @@ const navItems = [
 
     <a
       href="/carrito"
-      class="relative inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-surface"
+      class="relative inline-flex items-center gap-2 rounded-md border border-primary-contrast/60 px-3 py-2 text-sm text-primary-contrast hover:bg-primary-contrast/10 transition-colors"
       aria-label="Ver carrito"
     >
       <svg
@@ -49,7 +59,7 @@ const navItems = [
           d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.7 5h13.4M9 21a1 1 0 11-2 0 1 1 0 012 0zm10 0a1 1 0 11-2 0 1 1 0 012 0z"
         ></path>
       </svg>
-      <span>Carrito</span>
+      <span class="hidden sm:inline">Carrito</span>
       <span
         data-cart-count
         class="ml-1 hidden min-w-[1.5rem] rounded-full bg-accent px-1.5 py-0.5 text-center text-xs text-accent-contrast"
