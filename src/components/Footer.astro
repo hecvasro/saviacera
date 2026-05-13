@@ -1,5 +1,6 @@
 ---
 const year = new Date().getFullYear();
+const whatsappDigits = import.meta.env.PUBLIC_WHATSAPP_NUMBER;
 ---
 
 <footer class="mt-24 border-t border-border bg-surface">
@@ -23,7 +24,7 @@ const year = new Date().getFullYear();
       <ul class="mt-2 space-y-1">
         <li>
           <a
-            href="https://wa.me/18295286271"
+            href={`https://wa.me/${whatsappDigits}`}
             target="_blank"
             rel="noopener noreferrer"
             class="hover:text-accent">WhatsApp: +1 (829) 528-6271</a

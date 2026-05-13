@@ -6,7 +6,9 @@
  *
  * Setup checklist (full version in /README.md):
  *   1. Create a new Google Sheet ("Saviacera — Orders" works).
- *   2. Add a tab named "Orders" with the header row used in `ensureHeader()`.
+ *   2. Add a tab named "Orders" with the 8-column header row used in
+ *      `ensureHeader()`: Timestamp, OrderID, Items, Total, Status,
+ *      CustomerPhone, CustomerName, Notes.
  *   3. Extensions → Apps Script. Paste this file in `Code.gs`.
  *   4. Deploy → New deployment → Web app.
  *      - Execute as: Me
@@ -25,7 +27,6 @@ const HEADER = [
   'OrderID',
   'Items',
   'Total',
-  'Currency',
   'Status',
   'CustomerPhone',
   'CustomerName',
@@ -50,7 +51,6 @@ function doPost(e) {
       payload.orderId || '',
       itemsText,
       payload.total || 0,
-      payload.currency || 'DOP',
       'pending',
       '', // CustomerPhone — filled in manually after WhatsApp follow-up
       '', // CustomerName

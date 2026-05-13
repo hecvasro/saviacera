@@ -28,7 +28,6 @@ export interface OrderPayload {
   orderId: string;
   items: OrderLine[];
   total: number;
-  currency: "DOP";
   createdAt: string; // ISO
 }
 
@@ -98,7 +97,6 @@ export async function confirmCheckout(): Promise<void> {
     orderId,
     items,
     total,
-    currency: "DOP",
     createdAt,
   };
 
