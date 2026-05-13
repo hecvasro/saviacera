@@ -59,7 +59,9 @@ async function postOrder(payload: OrderPayload): Promise<void> {
 /** Builds the human-readable WhatsApp message body. Spanish (es-DO). */
 function buildWhatsappMessage(payload: OrderPayload): string {
   const lines: string[] = [];
-  lines.push(`Hola Saviacera, quiero confirmar este pedido:`);
+  lines.push("Hola Savia & Cera,");
+  lines.push("");
+  lines.push("Quiero confirmar este pedido.");
   lines.push("");
   lines.push(`*Pedido:* ${payload.orderId}`);
   lines.push("");

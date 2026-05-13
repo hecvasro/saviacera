@@ -113,20 +113,21 @@ export function clearCart(): void {
  * -------------------------------------------------------------------------- */
 
 /**
- * Generate an order ID like `SAV-20260214-0421`.
- *   - Date is local-time YYYYMMDD.
- *   - Suffix is a 4-digit random pad (0000–9999), zero-padded.
+ * Generate an order ID as a local-time timestamp: `YYYY-MM-DD HH:MM:SS`.
  *
- * Uniqueness is best-effort, not guaranteed — the Apps Script side should be
- * idempotent enough that a rare collision is harmless.
+ * Owner preference — the wife reads orders out of the WhatsApp messages and
+ * finds a timestamp more useful than a random suffix. Collisions only happen
+ * if two orders are confirmed in the same second, which is acceptable for a
+ * shop at this scale and the Apps Script side stamps its own server-side
+ * Timestamp column anyway.
  */
 export function getOrderId(): string {
   const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const dd = String(now.getDate()).padStart(2, "0");
-  const suffix = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
-  return `SAV-${yyyy}${mm}${dd}-${suffix}`;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
+    ` ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
+  );
 }
 
 export function getOrderMeta(): OrderMeta | null {
