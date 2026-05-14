@@ -9,42 +9,6 @@ const sets = (
     ({ data }) => data.category === "sets" && data.available,
   )
 ).sort((a, b) => a.data.order - b.data.order);
-
-// Group by occasion: the occasion comes from a tag — we treat any tag other
-// than the literal "set" / "kit" as a candidate occasion. (We tolerate the
-// older "kit" tag during the migration window in case any product still
-// has it.) Anything without an occasion lands under "Otros sets".
-function occasionOf(tags: readonly string[]): string {
-  const candidate = tags.find((t) => t !== "set" && t !== "kit");
-  return candidate || "sin-temporada";
-}
-
-const occasionLabels: Record<string, string> = {
-  "san-valentin": "San Valentín",
-  "dia-de-las-madres": "Día de las Madres",
-  "dia-del-maestro": "Día del Maestro",
-  navidad: "Navidad",
-  regalo: "Regalo",
-  "sin-temporada": "Otros sets",
-};
-
-const grouped = new Map<string, typeof sets>();
-for (const s of sets) {
-  const occ = occasionOf(s.data.tags);
-  if (!grouped.has(occ)) grouped.set(occ, []);
-  grouped.get(occ)!.push(s);
-}
-const groupOrder = [
-  "san-valentin",
-  "dia-de-las-madres",
-  "dia-del-maestro",
-  "navidad",
-  "regalo",
-  "sin-temporada",
-];
-const groups = Array.from(grouped.entries()).sort(
-  ([a], [b]) => groupOrder.indexOf(a) - groupOrder.indexOf(b),
-);
 ---
 
 <BaseLayout title="Sets — Savia & Cera">
@@ -56,20 +20,9 @@ const groups = Array.from(grouped.entries()).sort(
       arma a mano y se entrega listo para entregar.
     </p>
 
-    {
-      groups.map(([slug, items]) => (
-        <div class="mt-10">
-          <h2 class="font-display text-2xl mb-4">
-            {occasionLabels[slug] || slug}
-          </h2>
-          <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {items.map((p) => (
-              <ProductCard product={p} />
-            ))}
-          </div>
-        </div>
-      ))
-    }
+    <div class="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {sets.map((p) => <ProductCard product={p} />)}
+    </div>
 
     {
       sets.length === 0 && (
