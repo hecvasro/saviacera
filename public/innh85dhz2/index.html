@@ -42,6 +42,44 @@
           if (el) el.style.display = "none";
         }, 1000);
       });
+
+      // Auto-click "Login with GitHub" so non-technical users never see the
+      // button. Cloudflare Access has already authenticated them by the time
+      // this page loads — the GitHub button is a Decap-internal artifact that
+      // confuses people who've never used GitHub.
+      //
+      // Safe to leave running every page load: if Decap restored a previous
+      // session from localStorage, the button never appears and the observer
+      // disconnects after the 10s safety timeout without doing anything.
+      (function () {
+        function tryClickLogin() {
+          var buttons = document.querySelectorAll("button");
+          for (var i = 0; i < buttons.length; i++) {
+            var text = (buttons[i].textContent || "").trim().toLowerCase();
+            if (text.indexOf("login with github") !== -1) {
+              buttons[i].click();
+              return true;
+            }
+          }
+          return false;
+        }
+
+        // Try once immediately in case Decap is already rendered.
+        if (tryClickLogin()) return;
+
+        // Otherwise, watch the DOM for the button to appear.
+        var observer = new MutationObserver(function () {
+          if (tryClickLogin()) observer.disconnect();
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        // Safety: stop watching after 10s — either the button appeared and
+        // got clicked, or the user is already logged in (Decap restored from
+        // localStorage). Either way, nothing to do.
+        setTimeout(function () {
+          observer.disconnect();
+        }, 10000);
+      })();
     </script>
   </body>
 </html>
