@@ -21,42 +21,42 @@ const waHref = whatsappDigits
 
 // Placeholder gallery — replace with real photos from past events (bautizos,
 // baby showers, renovación de votos, regalos corporativos) when available.
-// Put real images under public/souvenirs/<filename> and reference them here.
+// Put real images under public/personalizados/<filename> and reference them.
 const gallery = [
   {
-    src: "https://picsum.photos/seed/saviacera-souvenirs-1/900/900",
+    src: "https://picsum.photos/seed/saviacera-personalizados-1/900/900",
     alt: "Souvenirs para bautizo",
   },
   {
-    src: "https://picsum.photos/seed/saviacera-souvenirs-2/900/900",
+    src: "https://picsum.photos/seed/saviacera-personalizados-2/900/900",
     alt: "Velas y jabones para baby shower",
   },
   {
-    src: "https://picsum.photos/seed/saviacera-souvenirs-3/900/900",
+    src: "https://picsum.photos/seed/saviacera-personalizados-3/900/900",
     alt: "Detalles personalizados para renovación de votos",
   },
   {
-    src: "https://picsum.photos/seed/saviacera-souvenirs-4/900/900",
+    src: "https://picsum.photos/seed/saviacera-personalizados-4/900/900",
     alt: "Regalos corporativos artesanales",
   },
 ];
 ---
 
 <BaseLayout
-  title="Souvenirs y Corporativo — Saviacera"
+  title="Souvenirs y Corporativos — Savia & Cera"
   description="Encargos personalizados de Savia & Cera para bautizos, baby showers, bodas y regalos corporativos."
 >
   <!-- Hero -->
   <section class="container-page py-12 md:py-16">
     <p class="chip">Encargos personalizados</p>
     <h1 class="mt-3 font-display text-4xl md:text-5xl leading-tight">
-      Souvenirs y Corporativo
+      Souvenirs y Corporativos
     </h1>
     <p class="mt-5 text-lg text-muted max-w-2xl">
       Diseñamos detalles artesanales hechos a la medida de tu evento o de tu
       marca. Cada pieza se piensa con intención, combinando velas, jabones,
-      ambientadores y empaques cuidados para que tus invitados — o tu equipo
-      — se lleven algo que se siente personal.
+      ambientadores y empaques cuidados para que tus invitados — o tu
+      equipo — se lleven algo que se siente personal.
     </p>
 
     <div class="mt-7 flex gap-3 flex-wrap">
@@ -81,15 +81,15 @@ const gallery = [
         <h3 class="font-display text-2xl">Eventos especiales</h3>
         <p class="mt-2 text-muted">
           Bautizos, baby showers, bodas, renovaciones de votos. Velas
-          aromáticas, jabones artesanales y detalles con stickers o etiquetas
-          personalizadas para que cada invitado se lleve un recuerdo de tu
-          momento.
+          aromáticas, jabones artesanales y detalles con stickers o
+          etiquetas personalizadas para que cada invitado se lleve un
+          recuerdo de tu momento.
         </p>
       </div>
       <div>
         <h3 class="font-display text-2xl">Regalos corporativos</h3>
         <p class="mt-2 text-muted">
-          Kits hechos a mano para tu equipo o tus clientes. Combinamos
+          Sets hechos a mano para tu equipo o tus clientes. Combinamos
           producto, empaque y un toque artesanal que dice "esto se pensó con
           tiempo" — algo que un regalo industrial no logra.
         </p>
@@ -97,9 +97,10 @@ const gallery = [
       <div>
         <h3 class="font-display text-2xl">Cómo trabajamos</h3>
         <p class="mt-2 text-muted">
-          Cuéntanos el evento, la fecha y la cantidad. Te proponemos opciones
-          de producto, fragancias y empaque, y coordinamos la entrega. Todo
-          por WhatsApp, sin compromisos hasta que te encanta la propuesta.
+          Cuéntanos el evento, la fecha y la cantidad. Te proponemos
+          opciones de producto, fragancias y empaque, y coordinamos la
+          entrega. Todo por WhatsApp, sin compromisos hasta que te encanta
+          la propuesta.
         </p>
       </div>
     </div>
@@ -143,8 +144,8 @@ const gallery = [
         ¿Tienes un evento o un encargo en mente?
       </h2>
       <p class="mt-3 max-w-xl mx-auto opacity-90">
-        Escríbenos por WhatsApp con la idea — fecha, cantidad aproximada y el
-        ánimo del evento — y armamos una propuesta hecha a tu medida.
+        Escríbenos por WhatsApp con la idea — fecha, cantidad aproximada y
+        el ánimo del evento — y armamos una propuesta hecha a tu medida.
       </p>
       <a
         href={waHref}

@@ -4,11 +4,11 @@ import BaseLayout from "~/layouts/BaseLayout.astro";
 import ProductCard from "~/components/ProductCard.astro";
 
 const all = await getCollection("products", ({ data }) => data.available);
-const featuredKits = all
-  .filter((p) => p.data.category === "kits" && p.data.featured)
+const featuredSets = all
+  .filter((p) => p.data.category === "sets" && p.data.featured)
   .sort((a, b) => a.data.order - b.data.order);
 const featuredOther = all
-  .filter((p) => p.data.category !== "kits" && p.data.featured)
+  .filter((p) => p.data.category !== "sets" && p.data.featured)
   .sort((a, b) => a.data.order - b.data.order);
 ---
 
@@ -27,7 +27,7 @@ const featuredOther = all
           Dominicana.
         </p>
         <div class="mt-7 flex gap-3 flex-wrap">
-          <a href="/kits" class="btn btn-primary">Ver kits de temporada</a>
+          <a href="/sets" class="btn btn-primary">Ver sets de temporada</a>
           <a href="/productos" class="btn btn-secondary"
             >Ver todos los productos</a
           >
@@ -43,21 +43,21 @@ const featuredOther = all
     </div>
   </section>
 
-  <!-- Featured kits -->
+  <!-- Featured sets -->
   {
-    featuredKits.length > 0 && (
+    featuredSets.length > 0 && (
       <section class="container-page py-12">
         <div class="flex items-end justify-between mb-6">
           <div>
             <p class="chip">Temporada</p>
-            <h2 class="mt-2 font-display text-3xl">Kits destacados</h2>
+            <h2 class="mt-2 font-display text-3xl">Sets destacados</h2>
           </div>
-          <a href="/kits" class="text-sm text-accent hover:underline">
+          <a href="/sets" class="text-sm text-accent hover:underline">
             Ver todos →
           </a>
         </div>
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {featuredKits.map((p) => (
+          {featuredSets.map((p) => (
             <ProductCard product={p} />
           ))}
         </div>
@@ -91,22 +91,23 @@ const featuredOther = all
       </div>
       <div>
         <p class="chip">Nuestra historia</p>
-        <h2 class="mt-3 font-display text-3xl">De nuestras manos a tu alma</h2>
-        <p class="mt-4 text-muted">
-          Savia &amp; Cera es el resultado de un sueño que comenzó entre las
-          paredes de mi hogar, en ese rincón donde el tiempo parece detenerse
-          para dar paso a la creación. Lo que empezó como un anhelo personal
-          se transformó en un compromiso: el de diseñar productos con alma e
-          intención, capaces de habitar tus espacios y acompañar tus momentos
-          especiales.
+        <h2 class="mt-3 font-display text-3xl">
+          De nuestras manos, a tu alma
+        </h2>
+        <p class="mt-4 text-muted text-justify">
+          <em>Savia &amp; Cera</em> es el resultado de un sueño que comenzó
+          entre las paredes de mi hogar, en ese rincón donde el tiempo
+          parece detenerse para dar paso a la creación. Lo que empezó como
+          un anhelo personal se transformó en un compromiso: el de diseñar
+          productos con <strong>alma e intención</strong>, capaces de
+          habitar tus espacios y acompañar tus momentos especiales.
         </p>
-        <p class="mt-3 text-muted">
-          Para nosotros, crear no es un proceso en serie, es un acto de amor.
-          Cada fragancia, cada vela y cada jabón han sido pensados para
-          aportar armonía a tu día a día, transformando lo simple en un
-          ritual con propósito. En cada orden compartimos un pedazo de
-          nuestra historia y la dedicación de nuestras manos. De nuestra
-          casa a la tuya.
+        <p class="mt-3 text-muted text-justify">
+          Para nosotros, crear no es un proceso en serie, es un acto de
+          amor. Cada fragancia, cada vela y cada jabón han sido pensados
+          para aportar armonía a tu día a día, transformando lo simple en
+          un ritual con propósito. En cada orden compartimos un pedazo de
+          nuestra historia y la dedicación de nuestras manos.
         </p>
       </div>
     </div>
