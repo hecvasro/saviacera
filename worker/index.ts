@@ -289,14 +289,38 @@ async function handleGithubProxy(
     }
     headers.set(k, v);
   }
+  // Drop content-length too — when we annotate the body below it changes,
+  // and we want fetch() to recompute it.
+  headers.delete("content-length");
+
   headers.set("Authorization", `Bearer ${installationToken}`);
   headers.set("Accept", "application/vnd.github+json");
   headers.set("User-Agent", "saviacera-cms-proxy");
   headers.set("X-GitHub-Api-Version", "2022-11-28");
 
   const method = request.method.toUpperCase();
-  const body =
-    method === "GET" || method === "HEAD" ? undefined : await request.arrayBuffer();
+
+  // Annotate commit messages with the editor's CF Access email so git log
+  // shows who made each change. Decap's commit-producing requests look like:
+  //   PUT    /repos/<o>/<r>/contents/<path>   body: {message, content, sha?}
+  //   DELETE /repos/<o>/<r>/contents/<path>   body: {message, sha}
+  //   POST   /repos/<o>/<r>/git/commits       body: {message, tree, parents}
+  // All have a `message` field on a JSON body. We parse, append a line, and
+  // re-stringify.
+  let body: BodyInit | undefined;
+  if (method === "GET" || method === "HEAD") {
+    body = undefined;
+  } else if (
+    request.headers.get("content-type")?.includes("application/json") &&
+    isCommitProducingPath(method, upstreamPath)
+  ) {
+    const editor =
+      request.headers.get("Cf-Access-Authenticated-User-Email") ?? null;
+    const text = await request.text();
+    body = annotateCommitBody(text, editor);
+  } else {
+    body = await request.arrayBuffer();
+  }
 
   const upstream = await fetch(upstreamUrl.toString(), {
     method,
@@ -442,4 +466,36 @@ function b64url(bytes: Uint8Array): string {
   let bin = "";
   for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
   return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Commit-message annotation                                                 */
+/* -------------------------------------------------------------------------- */
+
+function isCommitProducingPath(method: string, path: string): boolean {
+  const contents = `${REPO_PATH_PREFIX}/contents/`;
+  if ((method === "PUT" || method === "DELETE") && path.startsWith(contents)) {
+    return true;
+  }
+  if (method === "POST" && path === `${REPO_PATH_PREFIX}/git/commits`) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Append "Editado por: <email> via Cloudflare Access" to the commit message
+ * body. Returns the original text unchanged if parsing fails or the body
+ * doesn't have a string `message` field.
+ */
+function annotateCommitBody(text: string, editor: string | null): string {
+  if (!editor) return text;
+  try {
+    const json = JSON.parse(text) as Record<string, unknown>;
+    if (typeof json.message !== "string") return text;
+    json.message = `${json.message}\n\nEditado por: ${editor} via Cloudflare Access`;
+    return JSON.stringify(json);
+  } catch {
+    return text;
+  }
 }
