@@ -6,6 +6,13 @@
 //     else falls through to the static-asset binding (./dist).
 //   - `assets`: the built site, with the binding name "ASSETS" so the Worker
 //     can call env.ASSETS.fetch(request) for non-API paths.
+//   - `run_worker_first`: a path-pattern list. CF normally checks static
+//     assets first and only invokes the Worker if no asset matches, BUT
+//     when `not_found_handling: "404-page"` is set, an unmatched path
+//     short-circuits to the 404 page WITHOUT invoking the Worker. That
+//     would defeat the OAuth proxy. By listing /api/* here we force CF
+//     to run the Worker first for those paths, regardless of asset
+//     matching.
 //
 // Secrets to set BEFORE the admin panel works (Cloudflare dashboard →
 // Workers & Pages → saviacera → Settings → Variables and Secrets, or
@@ -23,6 +30,7 @@
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
-    "not_found_handling": "404-page"
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*"]
   }
 }
