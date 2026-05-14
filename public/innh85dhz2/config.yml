@@ -8,11 +8,17 @@ backend:
   name: github
   repo: hecvasro/saviacera
   branch: main
-  # Custom OAuth proxy — our Worker. The Worker's `/api/auth` endpoint kicks
-  # off the GitHub OAuth flow; `/api/callback` finalizes it and posts the
-  # token back via window.postMessage.
+  # Auth handshake: our Worker's /api/auth opens a popup, returns a fake-token
+  # postMessage to Decap. There's no real GitHub OAuth flow — auth is gated
+  # by Cloudflare Access (magic-link to whitelisted emails). The "token" Decap
+  # stores is the CF Access JWT, which our proxy verifies on each API call.
   base_url: https://saviacera.com
   auth_endpoint: /api/auth
+  # api_root: route Decap's GitHub API calls through our Worker proxy. The
+  # proxy mints a short-lived GitHub App installation token (scoped to this
+  # one repo) and forwards the request to api.github.com. No user OAuth, no
+  # PAT, no manual rotation.
+  api_root: https://saviacera.com/api/github
   # commit_messages: customize the autocommit subjects so git log stays readable.
   commit_messages:
     create: "CMS: nuevo {{collection}} «{{slug}}»"

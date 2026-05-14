@@ -1,50 +1,74 @@
 /// <reference types="@cloudflare/workers-types" />
 
 /**
- * Saviacera Worker — OAuth proxy for Decap CMS + static-asset fallthrough.
+ * Saviacera Worker — GitHub App proxy for Decap CMS + static-asset fallthrough.
  *
- * Routes:
- *   GET /api/auth        — Start OAuth flow. Redirects to GitHub with CSRF state.
- *   GET /api/callback    — GitHub redirects here with `code`. We exchange it for
- *                          a user access token, then return an HTML page that
- *                          posts the token back to the Decap admin window via
- *                          window.opener.postMessage (the protocol Decap expects).
+ * Architecture (replaces the old OAuth App flow):
  *
- *   Everything else      — Falls through to the static-asset binding (./dist).
+ *   Browser (Decap) ─→ /api/auth        ─→ Worker returns a fake-token HTML
+ *                                          handshake page (the "token" is just
+ *                                          the CF Access JWT, used so Decap
+ *                                          has *something* to put on Bearer
+ *                                          headers — our proxy ignores it).
+ *   Browser (Decap) ─→ /api/github/*    ─→ Worker mints a short-lived GitHub
+ *                                          App installation token and proxies
+ *                                          the request to api.github.com.
+ *   Browser (other) ─→ /everything-else ─→ env.ASSETS.fetch(request) (static).
  *
- * Secrets (set via `wrangler secret put` or the CF dashboard under the Worker's
- * "Variables and Secrets" panel — NOT in this file, NOT in `.env.local`):
- *   GITHUB_CLIENT_ID     — OAuth App's client ID. Public-ish, but easier to
- *                          rotate alongside the secret if it's a secret too.
- *   GITHUB_CLIENT_SECRET — OAuth App's client secret. Never expose.
+ * Why GitHub App and not OAuth App or PAT:
+ *   - The App is installed ONLY on hecvasro/saviacera. The mint endpoint
+ *     refuses to issue tokens for any other repo, so even a worst-case leak
+ *     of the private key only affects this one repo.
+ *   - Installation tokens auto-expire after ~1 hour. No manual rotation.
+ *   - No personal GitHub credentials (Hector's or María's) ever enter the
+ *     system. The wife doesn't even need a GitHub account.
  *
- * CSRF protection: a one-time `state` cookie is set on /api/auth and verified
- * on /api/callback. Prevents an attacker from tricking the user's browser into
- * completing an OAuth flow they didn't initiate.
+ * The /api/* paths are protected by Cloudflare Access, so anonymous Internet
+ * traffic never reaches this Worker for those routes. That gives us a clean
+ * defense-in-depth model:
+ *   Layer 1: obscure URL /innh85dhz2/   (filters bots)
+ *   Layer 2: Cloudflare Access magic-link to wife/husband email (only humans)
+ *   Layer 3: GitHub App installation scope (only this repo)
+ *
+ * Secrets (Worker Variables and Secrets in the CF dashboard):
+ *   - GITHUB_APP_ID             — public-ish App ID (e.g. "3713303")
+ *   - GITHUB_APP_INSTALLATION_ID — public-ish installation ID
+ *   - GITHUB_APP_PRIVATE_KEY    — PKCS#8 PEM (the PRIVATE KEY format, not
+ *                                  RSA PRIVATE KEY). Converted from GitHub's
+ *                                  PKCS#1 export with:
+ *                                    openssl pkcs8 -topk8 -nocrypt -in IN -out OUT
  */
 
 export interface Env {
   ASSETS: Fetcher;
-  GITHUB_CLIENT_ID?: string;
-  GITHUB_CLIENT_SECRET?: string;
+  GITHUB_APP_ID?: string;
+  GITHUB_APP_INSTALLATION_ID?: string;
+  GITHUB_APP_PRIVATE_KEY?: string;
 }
 
-const SITE_ORIGIN = "https://saviacera.com";
-// GitHub returns the user a token with the OAuth App's configured scopes. The
-// wife's GitHub account is only a collaborator on `hecvasro/saviacera`, so the
-// blast radius of this token is naturally limited to that one repo even though
-// the scope literal is broad. (Decap requires `repo` to read+write content.)
-const OAUTH_SCOPE = "repo";
+const REPO_OWNER = "hecvasro";
+const REPO_NAME = "saviacera";
+const REPO_PATH_PREFIX = `/repos/${REPO_OWNER}/${REPO_NAME}`;
+
+/* -------------------------------------------------------------------------- */
+/*  Top-level router                                                          */
+/* -------------------------------------------------------------------------- */
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/auth") {
-      return handleAuthStart(env);
+      return handleAuthHandshake(request);
     }
-    if (url.pathname === "/api/callback") {
-      return handleAuthCallback(request, env);
+    if (url.pathname === "/api/whoami") {
+      return handleWhoami(request);
+    }
+    if (url.pathname.startsWith("/api/github/")) {
+      return handleGithubProxy(request, env, url);
+    }
+    if (url.pathname.startsWith("/api/")) {
+      return new Response("Not found", { status: 404 });
     }
 
     return env.ASSETS.fetch(request);
@@ -52,150 +76,25 @@ export default {
 };
 
 /* -------------------------------------------------------------------------- */
-/*  /api/auth                                                                 */
+/*  /api/auth — Decap login handshake                                         */
 /* -------------------------------------------------------------------------- */
-
-function handleAuthStart(env: Env): Response {
-  if (!env.GITHUB_CLIENT_ID) {
-    return new Response(
-      "GITHUB_CLIENT_ID is not configured on the Worker. " +
-        "Set it via Cloudflare → Workers → saviacera → Variables and Secrets.",
-      { status: 500 },
-    );
-  }
-
-  // 128-bit CSRF state, kept in a short-lived HttpOnly cookie.
-  const state = crypto.randomUUID();
-
-  const redirectUri = `${SITE_ORIGIN}/api/callback`;
-  const params = new URLSearchParams({
-    client_id: env.GITHUB_CLIENT_ID,
-    redirect_uri: redirectUri,
-    scope: OAUTH_SCOPE,
-    state,
-    allow_signup: "false",
-  });
-
-  const headers = new Headers();
-  headers.set(
-    "Location",
-    `https://github.com/login/oauth/authorize?${params.toString()}`,
-  );
-  headers.append(
-    "Set-Cookie",
-    `decap_oauth_state=${state}; HttpOnly; Secure; SameSite=Lax; ` +
-      `Path=/api; Max-Age=600`,
-  );
-  return new Response(null, { status: 302, headers });
-}
-
-/* -------------------------------------------------------------------------- */
-/*  /api/callback                                                             */
-/* -------------------------------------------------------------------------- */
-
-async function handleAuthCallback(
-  request: Request,
-  env: Env,
-): Promise<Response> {
-  if (!env.GITHUB_CLIENT_ID || !env.GITHUB_CLIENT_SECRET) {
-    return new Response("OAuth proxy is not configured.", { status: 500 });
-  }
-
-  const url = new URL(request.url);
-  const code = url.searchParams.get("code");
-  const state = url.searchParams.get("state");
-  const error = url.searchParams.get("error");
-
-  if (error) {
-    return decapResponseHtml("error", {
-      message: `GitHub returned an error: ${error}`,
-    });
-  }
-  if (!code || !state) {
-    return new Response("Missing code or state.", { status: 400 });
-  }
-
-  // Verify CSRF state cookie.
-  const cookieState = parseCookie(
-    request.headers.get("Cookie"),
-    "decap_oauth_state",
-  );
-  if (!cookieState || cookieState !== state) {
-    return decapResponseHtml("error", {
-      message: "CSRF state mismatch. Try logging in again.",
-    });
-  }
-
-  // Exchange the code for an access token.
-  let tokenJson: { access_token?: string; error?: string };
-  try {
-    const tokenResp = await fetch(
-      "https://github.com/login/oauth/access_token",
-      {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          "User-Agent": "saviacera-decap-oauth-proxy",
-        },
-        body: JSON.stringify({
-          client_id: env.GITHUB_CLIENT_ID,
-          client_secret: env.GITHUB_CLIENT_SECRET,
-          code,
-        }),
-      },
-    );
-    tokenJson = (await tokenResp.json()) as typeof tokenJson;
-  } catch (err) {
-    return decapResponseHtml("error", {
-      message: `Token exchange failed: ${String(err)}`,
-    });
-  }
-
-  if (!tokenJson.access_token) {
-    return decapResponseHtml("error", {
-      message: tokenJson.error || "GitHub did not return an access token.",
-    });
-  }
-
-  // Hand the token back to the Decap admin window via the postMessage protocol
-  // Decap CMS expects (see decap-cms-lib-auth).
-  return decapResponseHtml("success", {
-    token: tokenJson.access_token,
-    provider: "github",
-  });
-}
-
-/* -------------------------------------------------------------------------- */
-/*  postMessage handshake page                                                */
-/* -------------------------------------------------------------------------- */
-
-type DecapPayload =
-  | { token: string; provider: "github" }
-  | { message: string };
 
 /**
- * Build the HTML page that talks to the opener window (Decap CMS) via
- * window.postMessage. Decap's auth lib (decap-cms-lib-auth) listens for a
- * message body of the form:
- *
- *   "authorization:<provider>:<status>:<json>"
- *
- * where status is "success" or "error". The opener also sends back an
- * "authorizing:<provider>" probe — we wait for that before posting, to make
- * sure Decap is ready.
+ * Decap CMS opens this URL in a popup and expects a postMessage of the form
+ *   "authorization:github:success:<JSON body>"
+ * containing a token. With the bot-proxy architecture, Decap's stored token
+ * is meaningless to the actual GitHub API — our /api/github/* proxy replaces
+ * it with the real installation token before forwarding upstream. But Decap
+ * still needs *some* string to put on Bearer headers, so we hand it the
+ * Cloudflare Access JWT (already in the request headers) which is at least
+ * tied to the authenticated user.
  */
-function decapResponseHtml(
-  status: "success" | "error",
-  payload: DecapPayload,
-): Response {
-  // SECURITY: payload is serialized into an inline script. Sanitize hard.
-  // The fields we serialize are constrained (access_token from GitHub, plus
-  // our own error strings), but defense-in-depth: refuse anything weird and
-  // escape script-closing sequences.
+function handleAuthHandshake(request: Request): Response {
+  const accessJwt =
+    request.headers.get("Cf-Access-Jwt-Assertion") ?? "cf-access-session";
+  const payload = { token: accessJwt, provider: "github" };
   const safe = JSON.stringify(payload).replace(/</g, "\\u003c");
-  const body = `authorization:github:${status}:${safe}`;
-  // Embed `body` via JSON.stringify so it round-trips safely as a JS literal.
+  const body = `authorization:github:success:${safe}`;
   const bodyJs = JSON.stringify(body);
 
   const html = `<!doctype html>
@@ -203,6 +102,7 @@ function decapResponseHtml(
 <head>
   <meta charset="utf-8" />
   <title>Saviacera CMS — autenticando…</title>
+  <meta name="robots" content="noindex" />
   <style>
     html, body { height: 100%; margin: 0; }
     body { font-family: -apple-system, system-ui, sans-serif;
@@ -214,7 +114,7 @@ function decapResponseHtml(
 </head>
 <body>
   <div class="box">
-    <p>Autenticando con GitHub…</p>
+    <p>Autenticando…</p>
     <p class="status">Esta ventana se cierra sola.</p>
   </div>
   <script>
@@ -224,7 +124,6 @@ function decapResponseHtml(
         if (!window.opener) return;
         window.opener.postMessage(body, "*");
       }
-      // Decap probes with "authorizing:github" — reply when we hear it.
       function listen(e) {
         if (typeof e.data !== "string") return;
         if (e.data.indexOf("authorizing:github") !== 0) return;
@@ -233,7 +132,6 @@ function decapResponseHtml(
         setTimeout(function () { window.close(); }, 250);
       }
       window.addEventListener("message", listen, false);
-      // Belt-and-suspenders: also post immediately in case the opener is ready.
       send();
     })();
   </script>
@@ -241,25 +139,239 @@ function decapResponseHtml(
 </html>`;
 
   return new Response(html, {
-    status: status === "success" ? 200 : 400,
-    headers: {
-      "Content-Type": "text/html; charset=utf-8",
-      // Drop the CSRF cookie now that it's used.
-      "Set-Cookie":
-        "decap_oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/api; Max-Age=0",
-    },
+    status: 200,
+    headers: { "Content-Type": "text/html; charset=utf-8" },
   });
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Cookie helper                                                             */
+/*  /api/whoami — debug helper                                                */
 /* -------------------------------------------------------------------------- */
 
-function parseCookie(header: string | null, name: string): string | null {
-  if (!header) return null;
-  for (const part of header.split(";")) {
-    const [k, ...v] = part.trim().split("=");
-    if (k === name) return v.join("=");
+/**
+ * Returns the email of the user that came through Cloudflare Access, plus a
+ * confirmation that the API surface is reachable. Useful for smoke-testing
+ * without touching GitHub at all.
+ */
+function handleWhoami(request: Request): Response {
+  const email =
+    request.headers.get("Cf-Access-Authenticated-User-Email") ?? null;
+  return new Response(
+    JSON.stringify(
+      { ok: true, email, time: new Date().toISOString() },
+      null,
+      2,
+    ),
+    {
+      status: 200,
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+    },
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  /api/github/* — proxy with installation token                             */
+/* -------------------------------------------------------------------------- */
+
+async function handleGithubProxy(
+  request: Request,
+  env: Env,
+  url: URL,
+): Promise<Response> {
+  if (
+    !env.GITHUB_APP_ID ||
+    !env.GITHUB_APP_INSTALLATION_ID ||
+    !env.GITHUB_APP_PRIVATE_KEY
+  ) {
+    return new Response(
+      "GitHub App credentials not configured. Check Worker variables.",
+      { status: 500 },
+    );
   }
-  return null;
+
+  // Strip "/api/github" from the path; the rest is what we send upstream.
+  const upstreamPath = url.pathname.replace(/^\/api\/github/, "");
+
+  // Decap fetches /user immediately after login to render the editor's
+  // identity. Installation tokens can't access /user, so we synthesize a
+  // safe placeholder. The real authenticated identity is the CF Access
+  // email; surface it as `name` so it appears in Decap's top-right corner.
+  if (upstreamPath === "/user") {
+    const email =
+      request.headers.get("Cf-Access-Authenticated-User-Email") ?? "cms-bot";
+    return jsonResponse({
+      login: "saviacera-cms-bot[bot]",
+      name: email,
+      email,
+      avatar_url: "https://saviacera.com/favicon.svg",
+      type: "Bot",
+    });
+  }
+
+  // Allow only paths that target the saviacera repo. Defense-in-depth: the
+  // installation token is already scoped to this repo by GitHub, but blocking
+  // unknown paths reduces the surface area in case of bugs or unexpected
+  // Decap behavior.
+  if (
+    !upstreamPath.startsWith(REPO_PATH_PREFIX + "/") &&
+    upstreamPath !== REPO_PATH_PREFIX
+  ) {
+    return new Response(
+      `Forbidden: proxy only allows /repos/${REPO_OWNER}/${REPO_NAME}/* and /user. Got: ${upstreamPath}`,
+      { status: 403 },
+    );
+  }
+
+  // Mint a fresh installation token. (For now, no caching — admin traffic is
+  // low and minting is ~200ms. If this becomes hot, cache via module-level
+  // variable with expiry awareness, or move to Cache API.)
+  let installationToken: string;
+  try {
+    installationToken = await getInstallationToken(env);
+  } catch (err) {
+    return new Response(
+      `Failed to mint installation token: ${String(err)}`,
+      { status: 502 },
+    );
+  }
+
+  // Build upstream URL.
+  const upstreamUrl = new URL(upstreamPath + url.search, "https://api.github.com");
+
+  // Forward headers, but strip ones that shouldn't cross the boundary.
+  const headers = new Headers();
+  for (const [k, v] of request.headers.entries()) {
+    const lower = k.toLowerCase();
+    if (
+      lower === "host" ||
+      lower === "cookie" ||
+      lower === "authorization" ||
+      lower.startsWith("cf-") ||
+      lower === "x-real-ip" ||
+      lower === "x-forwarded-for" ||
+      lower === "x-forwarded-proto"
+    ) {
+      continue;
+    }
+    headers.set(k, v);
+  }
+  headers.set("Authorization", `Bearer ${installationToken}`);
+  headers.set("Accept", "application/vnd.github+json");
+  headers.set("User-Agent", "saviacera-cms-proxy");
+  headers.set("X-GitHub-Api-Version", "2022-11-28");
+
+  const method = request.method.toUpperCase();
+  const body =
+    method === "GET" || method === "HEAD" ? undefined : await request.arrayBuffer();
+
+  const upstream = await fetch(upstreamUrl.toString(), {
+    method,
+    headers,
+    body,
+  });
+
+  // Stream the upstream response back. Strip hop-by-hop headers.
+  const outHeaders = new Headers();
+  for (const [k, v] of upstream.headers.entries()) {
+    const lower = k.toLowerCase();
+    if (lower === "content-encoding" || lower === "transfer-encoding") continue;
+    outHeaders.set(k, v);
+  }
+  return new Response(upstream.body, {
+    status: upstream.status,
+    statusText: upstream.statusText,
+    headers: outHeaders,
+  });
+}
+
+function jsonResponse(value: unknown, status = 200): Response {
+  return new Response(JSON.stringify(value), {
+    status,
+    headers: { "Content-Type": "application/json; charset=utf-8" },
+  });
+}
+
+/* -------------------------------------------------------------------------- */
+/*  GitHub App JWT + installation token mint                                  */
+/* -------------------------------------------------------------------------- */
+
+let cachedPrivateKey: CryptoKey | null = null;
+
+async function getInstallationToken(env: Env): Promise<string> {
+  const jwt = await signGithubAppJwt(env);
+
+  const resp = await fetch(
+    `https://api.github.com/app/installations/${env.GITHUB_APP_INSTALLATION_ID}/access_tokens`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${jwt}`,
+        Accept: "application/vnd.github+json",
+        "User-Agent": "saviacera-cms-proxy",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    },
+  );
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`installations/access_tokens returned ${resp.status}: ${text}`);
+  }
+
+  const data = (await resp.json()) as { token?: string };
+  if (!data.token) {
+    throw new Error("installations/access_tokens response missing 'token'");
+  }
+  return data.token;
+}
+
+async function signGithubAppJwt(env: Env): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  const header = b64url(
+    new TextEncoder().encode(JSON.stringify({ alg: "RS256", typ: "JWT" })),
+  );
+  const payload = b64url(
+    new TextEncoder().encode(
+      JSON.stringify({
+        // Clock-skew tolerance: GitHub recommends iat 60s in the past.
+        iat: now - 60,
+        // Max GitHub allows is 10 min; we use 9 to be safe.
+        exp: now + 540,
+        iss: env.GITHUB_APP_ID,
+      }),
+    ),
+  );
+  const message = `${header}.${payload}`;
+
+  if (!cachedPrivateKey) {
+    cachedPrivateKey = await importRsaPrivateKey(env.GITHUB_APP_PRIVATE_KEY!);
+  }
+
+  const sig = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    cachedPrivateKey,
+    new TextEncoder().encode(message),
+  );
+  return `${message}.${b64url(new Uint8Array(sig))}`;
+}
+
+async function importRsaPrivateKey(pem: string): Promise<CryptoKey> {
+  const b64 = pem
+    .replace(/-----BEGIN [A-Z ]+-----/g, "")
+    .replace(/-----END [A-Z ]+-----/g, "")
+    .replace(/\s+/g, "");
+  const der = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  return crypto.subtle.importKey(
+    "pkcs8",
+    der.buffer,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+}
+
+function b64url(bytes: Uint8Array): string {
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
