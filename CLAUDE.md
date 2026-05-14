@@ -57,18 +57,18 @@ The deploy target is **Workers Static Assets**, not Cloudflare Pages. The site i
 }
 ```
 
-### Deploy modes (current state: manual via wrangler; auto-deploy via Workers Builds pending)
+### Deploy modes (current state: GitHub → Workers Builds auto-deploy is live; manual via wrangler is the fallback)
 
-**Today (manual)**: deploys happen via `wrangler deploy` from a machine with the API token loaded. Two npm scripts:
+**Today (auto-deploy)**: every push to `main` triggers a Cloudflare Workers Builds run (`npm run build` → `npx wrangler deploy`) that publishes `./dist` to `saviacera.com`. No local tooling required — pushing **is** the deploy. Build vars (`PUBLIC_ORDER_ENDPOINT`, `PUBLIC_WHATSAPP_NUMBER`, `NODE_VERSION`) live in the Cloudflare dashboard (Workers & Pages → saviacera → Settings → Variables and Secrets / Build) and are the canonical source of truth for production builds. Local `.env.local` only affects `npm run dev` / `npm run build` on Hector's machine.
 
-- `npm run deploy` — build + push to production. Updates `saviacera.com`.
+**Manual fallback** (for emergencies, or to preview a version without promoting it): two npm scripts read deploy creds from `.envrc.local` via direnv:
+
+- `npm run deploy` — build + push to production. Updates `saviacera.com`. Useful when you need to deploy without going through GitHub (e.g. dashboard build is wedged).
 - `npm run deploy:preview` — build + upload a new Worker **version** without promoting it to production (`wrangler versions upload`). Returns a preview URL for that version; production is unaffected until you `wrangler versions deploy` it.
 
 Both run `astro check && astro build` first, then the wrangler step reads `wrangler.jsonc` and uploads `./dist`.
 
-**Planned (GitHub → Workers Builds auto-deploy)**: connect the GitHub repo to the Worker so every push to `main` triggers a Cloudflare-side build + deploy. This is the target state — it unblocks the wife-facing workflow (she just pushes; no wrangler, no token, no direnv). Setup procedure below.
-
-### Setting up GitHub auto-deploy (one-time, user action)
+### How GitHub auto-deploy is set up (reference)
 
 Done from the modern unified **Workers & Pages → saviacera → Settings → Builds** UI. Procedure:
 
@@ -86,10 +86,6 @@ Done from the modern unified **Workers & Pages → saviacera → Settings → Bu
    - `NODE_VERSION` = `20`
    These must be **build-time vars** (visible to `astro build`), not Worker runtime secrets, because `PUBLIC_*` is baked in at build time.
 5. Save. The first auto-deploy fires on the next push to `main`.
-
-**Important**: once auto-deploy is active, `.env.local` is no longer the source of truth for production builds — the Cloudflare dashboard build vars are. Local `.env.local` only affects `npm run dev` / `npm run build` on Hector's machine. Keep them in sync manually, or trust the dashboard as canonical.
-
-**After this is set up**: the `npm run deploy` script becomes a fallback for emergency manual deploys. Day-to-day, push to `main` is the deploy.
 
 ### How credentials flow
 
@@ -193,7 +189,7 @@ Six project-local skills in `.claude/skills/` drive guided Spanish Q&A flows for
 | `/cambiar-tema`       | Walk through a `src/styles/tokens.css` change (color, font, radius, spacing, shadow). Adds Google Fonts `<link>` to `BaseLayout.astro` when font changes. Documents logo-font wiring path for future. |
 | `/publicar`           | Inspect pending changes, commit, push. Fallback when a skill above left changes unpublished. |
 
-Each skill ends by pushing to `main`. Once GitHub auto-deploy is set up (see "Setting up GitHub auto-deploy" above), the push **is** the deploy. Until then, Hector still needs to run `npm run deploy` after the wife's skill-driven changes — the `publicar` skill has a note about that and reads CLAUDE.md to decide what message to show the user.
+Each skill ends by pushing to `main`. GitHub auto-deploy is configured, so the push **is** the deploy — no extra `npm run deploy` step needed after a skill-driven change.
 
 **Skill design principles** (apply when adding or editing skills):
 

@@ -2,14 +2,14 @@
 
 Status snapshot, what's done, what's pending, and what needs a decision before it can proceed. The wife-facing how-to lives in [README.md](./README.md) (Spanish). The technical/operating reference lives in [CLAUDE.md](./CLAUDE.md). This file is the **handoff doc** — kept terse and actionable so a future Claude session (or you, returning a week later) can pick up cold.
 
-Last updated: 2026-05-11.
+Last updated: 2026-05-13.
 
 ## Status snapshot
 
 - **Code lives at** `github.com/hecvasro/saviacera` (private remote, branch `main`).
 - **Production site**: https://saviacera.com (apex canonical) and https://www.saviacera.com — both serve the live build with auto-issued certs.
-- **Hosting**: Cloudflare Workers Static Assets, Worker name `saviacera`, configured by `wrangler.jsonc`, deployed via `wrangler deploy`. (Migrated off Cloudflare Pages on 2026-05-12.) GitHub→CF auto-deploy is not yet wired (next priority).
-- **CI**: none. Deploys are manual via `npm run deploy` from a machine with the API token loaded.
+- **Hosting**: Cloudflare Workers Static Assets, Worker name `saviacera`, configured by `wrangler.jsonc`. (Migrated off Cloudflare Pages on 2026-05-12.)
+- **CI/Deploy**: GitHub → Cloudflare Workers Builds auto-deploy is **live**. Every push to `main` triggers a Cloudflare-side build + `wrangler deploy`. `npm run deploy` remains as a manual fallback.
 - **Content**: 3 example products in `src/content/products/` (all with picsum placeholder images).
 - **Order flow**: NOT YET FUNCTIONAL in production — see "Blocking production go-live" below.
 - **Content-management strategy**: two interfaces sharing the same markdown files.
@@ -30,20 +30,7 @@ Last updated: 2026-05-11.
 
 ## In-flight / decision needed
 
-### Priority 1 — GitHub → Cloudflare Workers Builds auto-deploy (one-time setup)
-
-Once this is wired, `git push origin main` triggers a Cloudflare-side build + `wrangler deploy`, and the wife's skill workflow becomes truly end-to-end (no `npm run deploy` step needed). Until then, every wife-driven push still needs Hector to manually deploy.
-
-Now that the project is on **Workers Static Assets** (not Pages), this is configured from the unified **Workers & Pages → saviacera Worker → Settings → Builds** UI rather than the old Pages-only flow. The old caveat that this "must be done via Pages dashboard OAuth and can't be scripted" is no longer relevant — Workers Builds is the same unified surface, and `wrangler.jsonc` declares the build target, so config drift between the dashboard and the repo is minimized. Full procedure is in CLAUDE.md → "Setting up GitHub auto-deploy". Summary:
-
-1. Cloudflare Dashboard → `saviacera` Worker → Settings → Builds → Connect → authorize repo `hecvasro/saviacera`.
-2. Configure build: build command `npm run build`, deploy command `npx wrangler deploy` (auto-filled from `wrangler.jsonc`), branch `main`, `NODE_VERSION=20`.
-3. Set production **build** vars in the dashboard: `PUBLIC_ORDER_ENDPOINT`, `PUBLIC_WHATSAPP_NUMBER`, `NODE_VERSION`. (Build vars, not runtime secrets — `PUBLIC_*` is baked in at `astro build` time.)
-4. Re-attach the custom domains (`saviacera.com`, `www.saviacera.com`) to the new Worker via Settings → Domains & Routes → Add Custom Domain. The Pages-side attachments can then be removed.
-
-**Caveat**: production build vars then live in the Cloudflare dashboard, not `.env.local`. Keep them in sync mentally or treat the dashboard as canonical for production builds.
-
-### Priority 2 — Build Decap CMS  *(code shipped, manual setup pending)*
+### Priority 1 — Build Decap CMS  *(code shipped, manual setup pending)*
 
 Code is in place — Worker auth proxy (`worker/index.ts`), admin bootstrap
 (`public/innh85dhz2/index.html`), schema mapping (`public/innh85dhz2/config.yml`).
@@ -62,7 +49,7 @@ Future polish (after MVP works):
 - Add the `theme` collection (fonts, colors, optional logo image) + the build wiring that translates the JSON into CSS variables and Google Fonts `<link>`.
 - Flip CLAUDE.md + README.md mentions of "próximamente" to "active".
 
-### Priority 3 — Wife setup (one-time)
+### Priority 2 — Wife setup (one-time)
 
 After Decap (P2) is live, she needs almost nothing local:
 
@@ -73,7 +60,7 @@ After Decap (P2) is live, she needs almost nothing local:
 
 No Claude Code, no SSH keys, no `npm install`, no terminal. If at some later point she wants the conversational Claude flow as well, the skills are there waiting.
 
-### Priority 4 — `www` → apex redirect (canonical hardening)
+### Priority 3 — `www` → apex redirect (canonical hardening)
 
 Both apex and www currently serve the same content with 200. For real SEO canonical behavior, www should 301 → apex. Three paths open (you picked apex as canonical, so direction is set; only the **mechanism** is undecided):
 
@@ -90,7 +77,7 @@ These need to be resolved before the site can actually take orders. Currently th
 - [ ] **Create `.env.local`** with real values for `PUBLIC_ORDER_ENDPOINT` and `PUBLIC_WHATSAPP_NUMBER`. Today the file doesn't exist locally, so the build embeds an undefined endpoint and the WhatsApp number defaults to the hardcode in `Footer.astro` (see next item).
 - [ ] **Deploy the Google Apps Script Web App** that receives orders. Follow the steps already documented in `README.md` → "Configurar el flujo de pedidos". Output is the `/exec` URL that goes into `PUBLIC_ORDER_ENDPOINT`.
 - [ ] **Fix `src/components/Footer.astro:26`** — the WhatsApp link hardcodes `18295286271` instead of reading from `import.meta.env.PUBLIC_WHATSAPP_NUMBER`. Replace with the env-driven value (with a sensible fallback or build-time assertion if empty).
-- [ ] **Redeploy** (`npm run deploy`) after the above three.
+- [ ] **Push to `main`** after the above three so Workers Builds rebuilds with the new env vars.
 - [ ] **End-to-end smoke test**: add a candle to cart, "checkout", confirm (a) WhatsApp opens with the prefilled message and (b) the order appears as a row in the Google Sheet.
 
 ## Short-term backlog (after go-live)
@@ -132,4 +119,4 @@ These can be designed when prioritized. None of this is blocking go-live.
 - **Token scope policy**: minimum required scopes for each operation listed in CLAUDE.md → "API token scopes". If a list endpoint returns empty + `success: true`, suspect missing read scope before concluding the resource doesn't exist.
 - **Commit identity**: `hecvasro <8771303+hecvasro@users.noreply.github.com>` — enforced by `~/.gitconfig` global, not repo-local.
 - **Don't deploy with `--commit-dirty=true`** unless you've checked the diff. Keeping the warning is the safer default.
-- **After GH auto-deploy is wired**: production env vars live in the Cloudflare dashboard, not `.env.local`. Don't assume `.env.local` reflects what's deployed.
+- **Production env vars live in the Cloudflare dashboard**, not `.env.local`. Local `.env.local` only affects `npm run dev` / `npm run build` on Hector's machine. Don't assume `.env.local` reflects what's deployed.
