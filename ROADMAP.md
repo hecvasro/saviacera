@@ -43,17 +43,24 @@ Now that the project is on **Workers Static Assets** (not Pages), this is config
 
 **Caveat**: production build vars then live in the Cloudflare dashboard, not `.env.local`. Keep them in sync mentally or treat the dashboard as canonical for production builds.
 
-### Priority 2 — Build Decap CMS
+### Priority 2 — Build Decap CMS  *(code shipped, manual setup pending)*
 
-The primary interface for the non-technical owner. Won't be useful until P1 (auto-deploy) lands. Full implementation plan in CLAUDE.md → "Building Decap CMS". Step-by-step:
+Code is in place — Worker auth proxy (`worker/index.ts`), admin bootstrap
+(`public/innh85dhz2/index.html`), schema mapping (`public/innh85dhz2/config.yml`).
+Admin URL is intentionally obscured: `saviacera.com/innh85dhz2/`.
 
-1. GitHub OAuth App + auth proxy (Cloudflare Pages Functions example or hosted alternative).
-2. Add `public/admin/index.html` (CDN-loaded Decap) + `public/admin/config.yml` with the products collection.
-3. Smoke-test: add a product through the form, verify GH auto-deploy fires, site updates.
-4. Add the `theme` collection (fonts, colors, optional logo image) + the build wiring that translates the JSON into CSS variables and the Google Fonts `<link>`.
-5. (Optional) Cloudflare Access in front of `/admin/*` for an extra magic-link layer.
-6. Wife onboarding: add as GitHub collaborator, send her the `/admin/` URL, walk through one product creation.
-7. Flip CLAUDE.md + README.md from "próximamente" to "active".
+**Remaining work is operational, not coding** — see
+[DECAP-SETUP.md](./DECAP-SETUP.md) for the click-by-click steps:
+
+1. Create the GitHub OAuth App (callback URL: `https://saviacera.com/api/callback`).
+2. Set `GITHUB_CLIENT_ID` + `GITHUB_CLIENT_SECRET` as Worker secrets in the CF dashboard.
+3. Set up Cloudflare Access (Zero Trust) on `/innh85dhz2/*` + `/api/auth` + `/api/callback`, magic-link to wife's email.
+4. (When she's ready) Add wife as collaborator with write access on `hecvasro/saviacera`.
+5. End-to-end smoke test: edit a product through Decap, verify commit → CF Build → site update.
+
+Future polish (after MVP works):
+- Add the `theme` collection (fonts, colors, optional logo image) + the build wiring that translates the JSON into CSS variables and Google Fonts `<link>`.
+- Flip CLAUDE.md + README.md mentions of "próximamente" to "active".
 
 ### Priority 3 — Wife setup (one-time)
 

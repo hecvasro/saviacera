@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Saviacera CMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- No SEO. Tell crawlers + search engines to ignore this entirely. -->
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+    <!-- Tiny favicon override so the tab doesn't show the site's. -->
+    <link rel="icon" href="data:," />
+    <style>
+      /* Show a friendly loading note before the Decap script bootstraps. */
+      .loading {
+        font-family: -apple-system, system-ui, sans-serif;
+        color: #6b665d;
+        max-width: 28rem;
+        margin: 4rem auto;
+        text-align: center;
+        padding: 1.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="loading" id="loading">
+      Cargando panel… Si esto no carga en unos segundos, revisa tu conexión y
+      recarga la página.
+    </div>
+
+    <!--
+      Decap CMS from its official CDN. Pinned to a major version so a future
+      Decap release won't surprise-break us. Bump deliberately when you want
+      to take a new release.
+    -->
+    <script
+      src="https://unpkg.com/decap-cms@^3/dist/decap-cms.js"
+    ></script>
+    <script>
+      // Hide the loading note once the CMS has rendered its own UI.
+      window.addEventListener("load", function () {
+        setTimeout(function () {
+          var el = document.getElementById("loading");
+          if (el) el.style.display = "none";
+        }, 1000);
+      });
+    </script>
+  </body>
+</html>

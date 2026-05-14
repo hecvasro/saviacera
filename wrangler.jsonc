@@ -1,14 +1,28 @@
 // Cloudflare Workers Static Assets config for saviacera.
-// `wrangler deploy` reads this and uploads ./dist as a static-assets-only Worker.
-// No `main` field: there is no server-side handler, all routes serve from ./dist.
+//
+// What this declares:
+//   - `main`: a small Worker script that handles two OAuth-proxy routes
+//     (/api/auth, /api/callback) for the Decap CMS admin panel. Everything
+//     else falls through to the static-asset binding (./dist).
+//   - `assets`: the built site, with the binding name "ASSETS" so the Worker
+//     can call env.ASSETS.fetch(request) for non-API paths.
+//
+// Secrets to set BEFORE the admin panel works (Cloudflare dashboard →
+// Workers & Pages → saviacera → Settings → Variables and Secrets, or
+// `wrangler secret put GITHUB_CLIENT_SECRET`):
+//   - GITHUB_CLIENT_ID
+//   - GITHUB_CLIENT_SECRET
+// Without them, /api/auth returns 500 but the rest of the site keeps working.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "saviacera",
+  "main": "./worker/index.ts",
   "compatibility_date": "2026-05-12",
   "workers_dev": false,
   "preview_urls": false,
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     "not_found_handling": "404-page"
   }
 }

@@ -1,0 +1,164 @@
+# Decap CMS configuration for Saviacera.
+#
+# Maps the Astro content collection schema (src/content.config.ts) onto the
+# Decap editor UI. Each commit Decap makes is a git commit on `main`, which
+# triggers the Cloudflare Workers Builds auto-deploy.
+
+backend:
+  name: github
+  repo: hecvasro/saviacera
+  branch: main
+  # Custom OAuth proxy — our Worker. The Worker's `/api/auth` endpoint kicks
+  # off the GitHub OAuth flow; `/api/callback` finalizes it and posts the
+  # token back via window.postMessage.
+  base_url: https://saviacera.com
+  auth_endpoint: /api/auth
+  # commit_messages: customize the autocommit subjects so git log stays readable.
+  commit_messages:
+    create: "CMS: nuevo {{collection}} «{{slug}}»"
+    update: "CMS: actualizar {{collection}} «{{slug}}»"
+    delete: "CMS: borrar {{collection}} «{{slug}}»"
+    uploadMedia: "CMS: subir imagen «{{path}}»"
+    deleteMedia: "CMS: borrar imagen «{{path}}»"
+
+# Spanish (DR) UI strings on labels and helper text. The Decap interface chrome
+# itself defaults to English; we can switch it to Spanish later via the
+# `locale` option once we're sure the wife is comfortable.
+locale: en
+
+# Media — where uploaded images land in the repo and how they're referenced
+# from frontmatter.
+media_folder: public/uploads
+public_folder: /uploads
+# Cap uploaded files at ~1.5 MB so the repo doesn't bloat with phone-camera
+# originals. The owner-onboarding doc explains how to compress with TinyPNG.
+max_file_size: 1500000
+
+collections:
+  # ---------------------------------------------------------------------------
+  # Products — one markdown file per product. Mirrors the Zod schema in
+  # src/content.config.ts. Frontmatter format is YAML so we read it cleanly.
+  # ---------------------------------------------------------------------------
+  - name: products
+    label: Productos
+    label_singular: Producto
+    folder: src/content/products
+    create: true
+    delete: true
+    slug: "{{slug}}" # filename = slug (Astro convention)
+    format: yaml-frontmatter
+    summary: "{{name}} — RD${{priceDOP}} ({{category}})"
+    sortable_fields: [order, priceDOP, createdAt, name]
+    view_filters:
+      - label: Disponibles
+        field: available
+        pattern: true
+      - label: Destacados
+        field: featured
+        pattern: true
+    fields:
+      - { name: name, label: Nombre, widget: string }
+      - {
+          name: tagline,
+          label: Frase corta,
+          widget: string,
+          required: false,
+          hint: "Opcional. Aparece debajo del nombre.",
+        }
+      - {
+          name: description,
+          label: Descripción,
+          widget: text,
+          hint: "Texto corto, 2–3 líneas.",
+        }
+      - name: category
+        label: Categoría
+        widget: select
+        options:
+          - { label: Velas, value: velas }
+          - { label: Ambientadores, value: ambientadores }
+          - { label: Difusores, value: difusores }
+          - { label: Jabones, value: jabones }
+          - { label: Sets, value: sets }
+          - { label: Otros, value: otros }
+        hint: "Determina dónde aparece el producto en el catálogo."
+      - name: tags
+        label: Etiquetas
+        widget: list
+        required: false
+        hint: "Para sets, usa la ocasión (san-valentin, dia-de-las-madres, etc.)."
+      - {
+          name: priceDOP,
+          label: "Precio (RD$)",
+          widget: number,
+          value_type: int,
+          min: 0,
+          step: 1,
+        }
+      - { name: sku, label: SKU, widget: string, required: false }
+      - {
+          name: stock,
+          label: Inventario,
+          widget: number,
+          value_type: int,
+          min: 0,
+          required: false,
+          hint: "Cantidad disponible. Déjalo vacío si no llevas inventario por unidad.",
+        }
+      - {
+          name: available,
+          label: Disponible,
+          widget: boolean,
+          default: true,
+          hint: "Apaga esto para esconder el producto del sitio sin borrarlo.",
+        }
+      - name: images
+        label: Fotos
+        widget: list
+        # Each list item is a single image picker.
+        field: { name: image, label: Imagen, widget: image }
+        hint: "La primera foto es la portada. Idealmente cuadradas, comprimidas a <1 MB."
+      - name: includes
+        label: "Incluye (solo sets)"
+        widget: list
+        required: false
+        field: { name: item, label: Item, widget: string }
+        hint: "Sólo aplica a sets. Lista cada cosa que viene en la caja."
+      - name: details
+        label: Detalles
+        widget: list
+        required: false
+        field: { name: detail, label: Detalle, widget: string }
+        hint: 'Ej: "Aroma: coco + vainilla", "Duración: ~40 h".'
+      - {
+          name: featured,
+          label: Destacado,
+          widget: boolean,
+          default: false,
+          hint: "Si está activo, aparece en la portada en «Favoritos» o «Sets destacados».",
+        }
+      - {
+          name: order,
+          label: Orden,
+          widget: number,
+          value_type: int,
+          default: 100,
+          hint: "Más bajo aparece primero. Deja 100 si no te importa el orden.",
+        }
+      - {
+          name: createdAt,
+          label: Fecha de creación,
+          widget: datetime,
+          required: false,
+          format: "YYYY-MM-DD",
+          date_format: "YYYY-MM-DD",
+          time_format: false,
+          picker_utc: false,
+        }
+      - {
+          name: body,
+          label: Texto largo (opcional),
+          widget: markdown,
+          required: false,
+          hint: "Aparece debajo de la descripción en la página del producto. Puedes formatear con negritas, listas, etc.",
+        }

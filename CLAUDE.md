@@ -206,9 +206,20 @@ Each skill ends by pushing to `main`. Once GitHub auto-deploy is set up (see "Se
 
 When updating skills, keep the SKILL.md description tight (one sentence in Spanish, with verbs that match how the user might phrase the request — "agregar producto", "subir un jabón", "nuevo kit", etc.). The description is what Claude uses to decide which skill matches a freeform request.
 
-## Building Decap CMS (planned, not yet implemented)
+## Building Decap CMS — code shipped, manual setup pending
 
-Decap is the **primary content-management interface for the non-technical owner**. Status: not built yet. This section is the implementation plan for the session that builds it.
+Decap is the **primary content-management interface for the non-technical owner**.
+
+**Status**: technical pieces shipped in commits ending the Decap-MVP work. The admin URL is intentionally obscured to `saviacera.com/innh85dhz2/` (10-char crypto-random suffix). What's missing is operational glue that requires clicks in the GitHub and Cloudflare dashboards — see [DECAP-SETUP.md](./DECAP-SETUP.md) for the exact click-by-click procedure.
+
+Architecture summary:
+
+- **Auth proxy**: lives in the same Cloudflare Worker as the static-asset binding. `wrangler.jsonc` now declares `main: "./worker/index.ts"` and `assets.binding: "ASSETS"`. The Worker handles `/api/auth` (kicks off OAuth flow, sets a CSRF state cookie) and `/api/callback` (exchanges the GitHub code for a token, posts it back to Decap via `window.postMessage`). All other paths fall through to `env.ASSETS.fetch(request)`.
+- **Secrets**: `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` are Worker secrets, set via `wrangler secret put` or the CF dashboard. **Not** in `.env.local` (that file is for `PUBLIC_*` build-time vars only).
+- **Defense in depth**: (1) obscure URL `/innh85dhz2/`, (2) Cloudflare Access magic-link to wife's email in front of `/innh85dhz2/*` + `/api/*`, (3) GitHub OAuth — only collaborators on `hecvasro/saviacera` can commit.
+- **Token lifecycle**: GitHub OAuth tokens by default don't expire. We rely on collaborator access scoping (token is only useful on the one repo where the user is a collaborator) plus Cloudflare Access as the outer gate. Tokens can be revoked from <https://github.com/settings/applications>.
+
+The rest of this section is the original planning notes, kept for context on schema choices and Decap config decisions.
 
 ### Architecture
 
