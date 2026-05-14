@@ -304,13 +304,47 @@ async function handleGithubProxy(
     body,
   });
 
-  // Stream the upstream response back. Strip hop-by-hop headers.
+  // Strip hop-by-hop headers before forwarding back.
   const outHeaders = new Headers();
   for (const [k, v] of upstream.headers.entries()) {
     const lower = k.toLowerCase();
     if (lower === "content-encoding" || lower === "transfer-encoding") continue;
     outHeaders.set(k, v);
   }
+
+  // GitHub returns repo info with a `permissions` block tied to the *user*
+  // identity behind the token. With an installation token there is no real
+  // user, so GitHub returns push=false/pull=false. Decap reads those flags
+  // and concludes "your account doesn't have access to this repo".
+  //
+  // The actual write access is granted by the App's contents:write
+  // installation permission. We rewrite the response on GET /repos/<o>/<r>
+  // (and only that exact path) to advertise full write access, which
+  // matches reality from the proxy's perspective.
+  if (
+    method === "GET" &&
+    upstreamPath === REPO_PATH_PREFIX &&
+    upstream.headers.get("content-type")?.includes("application/json")
+  ) {
+    try {
+      const body = (await upstream.json()) as Record<string, unknown>;
+      body.permissions = {
+        admin: false,
+        maintain: false,
+        push: true,
+        triage: false,
+        pull: true,
+      };
+      return new Response(JSON.stringify(body), {
+        status: upstream.status,
+        statusText: upstream.statusText,
+        headers: outHeaders,
+      });
+    } catch {
+      // fall through to streaming the original body
+    }
+  }
+
   return new Response(upstream.body, {
     status: upstream.status,
     statusText: upstream.statusText,
