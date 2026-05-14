@@ -94,9 +94,19 @@ function handleAuthHandshake(request: Request): Response {
     request.headers.get("Cf-Access-Jwt-Assertion") ?? "cf-access-session";
   const payload = { token: accessJwt, provider: "github" };
   const safe = JSON.stringify(payload).replace(/</g, "\\u003c");
-  const body = `authorization:github:success:${safe}`;
-  const bodyJs = JSON.stringify(body);
+  const successBody = `authorization:github:success:${safe}`;
+  const successBodyJs = JSON.stringify(successBody);
 
+  // Decap's GitHub OAuth handshake protocol (see decap-cms-lib-auth):
+  //   1. Popup ─→ opener: "authorizing:github"
+  //   2. opener ─→ popup: "authorizing:github" (echo, confirms it's listening)
+  //   3. Popup ─→ opener: "authorization:github:success:<JSON>" with the token
+  //   4. Popup closes itself
+  //
+  // Sending the success message BEFORE the opener has echoed loses it: Decap
+  // doesn't start its postMessage listener until after the popup announces
+  // itself. We poll-announce every 100ms until we get the echo, in case the
+  // popup loads faster than Decap can install its listener.
   const html = `<!doctype html>
 <html lang="es">
 <head>
@@ -119,20 +129,44 @@ function handleAuthHandshake(request: Request): Response {
   </div>
   <script>
     (function () {
-      var body = ${bodyJs};
-      function send() {
-        if (!window.opener) return;
-        window.opener.postMessage(body, "*");
+      if (!window.opener) {
+        document.querySelector(".status").textContent =
+          "Esta página debe abrirse desde Decap. Cierra y reintenta.";
+        return;
       }
+      var successBody = ${successBodyJs};
+      var ready = "authorizing:github";
+      var announced = false;
+      var pollInterval = null;
+
+      function sendReady() {
+        window.opener.postMessage(ready, "*");
+      }
+
       function listen(e) {
         if (typeof e.data !== "string") return;
-        if (e.data.indexOf("authorizing:github") !== 0) return;
-        send();
+        if (e.data !== ready) return;
+        // Decap echoed back; it's now listening for the success message.
+        if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
         window.removeEventListener("message", listen, false);
-        setTimeout(function () { window.close(); }, 250);
+        window.opener.postMessage(successBody, "*");
+        setTimeout(function () { window.close(); }, 500);
       }
+
       window.addEventListener("message", listen, false);
-      send();
+      // Announce immediately, then poll every 100ms until echo (max ~5s).
+      sendReady();
+      var ticks = 0;
+      pollInterval = setInterval(function () {
+        ticks++;
+        if (ticks > 50) {
+          clearInterval(pollInterval);
+          document.querySelector(".status").textContent =
+            "Decap no respondió. Cierra esta ventana y reintenta.";
+          return;
+        }
+        sendReady();
+      }, 100);
     })();
   </script>
 </body>
