@@ -1,16 +1,14 @@
 ---
 name: Set de Día de las Madres
 tagline: Una caja para celebrar a mamá
-description: >
-  Un set pensado para el rinconcito del tocador de mamá:  jabón
-
-  artesanal a elegir, ambientador de linos y espacios (room & linen spray) y un joyero. Empaque listo para entregar.
+description: |
+  jabón artesanal, room & linen spray y un joyero. Empaque listo para entregar.
 category: sets
 tags:
   - set
   - dia-de-las-madres
   - regalo
-priceDOP: 1388
+priceDOP: 1390
 sku: SET-MD-2026
 stock: ""
 available: true
@@ -18,12 +16,13 @@ images:
   - /uploads/img_0934.jpg
   - /uploads/img_0900.jpeg
 includes:
-  - 1 vela de soya aroma rosas & cardamomo (150 g)
-  - 1 jabón artesanal de avena & miel
-  - 1 tarjeta escrita a mano
+  - "1 room & linen spray de 4 oz (fragancias: white peach blossom, drift &
+    bloom, lavender fields)"
+  - 1 jabón artesanal de leche de cabra y manteca de karité, coco y mango.
+  - 1 joyerito estilo trinket personalizado.
   - Empaque de regalo en caja kraft con cinta
 details:
-  - Ideal para San Valentín o aniversarios
+  - "Ideal para complementar el tocador de mamá "
   - Disponible mientras dure el inventario de temporada
 featured: true
 order: 5
