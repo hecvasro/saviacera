@@ -10,12 +10,18 @@ import { glob } from "astro/loaders";
  * reshaping content.
  *
  * Categories:
- *   - "velas"   → soy-wax candles
- *   - "jabones" → handcrafted soaps
- *   - "kits"    → bundles. Same product shape, just `category: "kits"` plus a
- *                 `tags` entry like "san-valentin" or "dia-de-las-madres" used
- *                 for seasonal grouping. The contents of the kit live in the
- *                 `includes` field as a plain string list — no relations.
+ *   - "velas"         → soy-wax candles
+ *   - "jabones"       → handcrafted soaps
+ *   - "ambientadores" → room fragrances + diffusers (oils, reeds, sprays)
+ *   - "kits"          → bundles. Same product shape, just `category: "kits"`
+ *                       plus a `tags` entry like "san-valentin" or
+ *                       "dia-de-las-madres" used for seasonal grouping. The
+ *                       contents of the kit live in the `includes` field as
+ *                       a plain string list — no relations.
+ *
+ * "Souvenirs y Corporativo" lives on its own page (/souvenirs-corporativo)
+ * and is not part of the product collection — it's a services/inquiry page
+ * with a WhatsApp CTA, not a cart-checkout flow.
  */
 const products = defineCollection({
   loader: glob({ pattern: "**/*.md", base: "./src/content/products" }),
@@ -27,7 +33,7 @@ const products = defineCollection({
       description: z.string(),
 
       // Taxonomy
-      category: z.enum(["velas", "jabones", "kits"]),
+      category: z.enum(["velas", "jabones", "ambientadores", "kits"]),
       tags: z.array(z.string()).default([]),
 
       // Commerce

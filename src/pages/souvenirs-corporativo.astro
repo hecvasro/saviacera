@@ -1,0 +1,159 @@
+---
+import BaseLayout from "~/layouts/BaseLayout.astro";
+
+const whatsappDigits = (
+  import.meta.env.PUBLIC_WHATSAPP_NUMBER || ""
+).replace(/\D/g, "");
+
+// Pre-filled WhatsApp message — kept neutral so it works for both souvenirs
+// (bautizo, baby shower, renovación de votos, etc.) and corporate gifts.
+const waMessage = [
+  "Hola Savia & Cera,",
+  "",
+  "Me interesa hacer una orden personalizada (souvenirs / regalo corporativo).",
+  "",
+  "Cuéntenme cómo coordinamos.",
+].join("\n");
+
+const waHref = whatsappDigits
+  ? `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(waMessage)}`
+  : "#";
+
+// Placeholder gallery — replace with real photos from past events (bautizos,
+// baby showers, renovación de votos, regalos corporativos) when available.
+// Put real images under public/souvenirs/<filename> and reference them here.
+const gallery = [
+  {
+    src: "https://picsum.photos/seed/saviacera-souvenirs-1/900/900",
+    alt: "Souvenirs para bautizo",
+  },
+  {
+    src: "https://picsum.photos/seed/saviacera-souvenirs-2/900/900",
+    alt: "Velas y jabones para baby shower",
+  },
+  {
+    src: "https://picsum.photos/seed/saviacera-souvenirs-3/900/900",
+    alt: "Detalles personalizados para renovación de votos",
+  },
+  {
+    src: "https://picsum.photos/seed/saviacera-souvenirs-4/900/900",
+    alt: "Regalos corporativos artesanales",
+  },
+];
+---
+
+<BaseLayout
+  title="Souvenirs y Corporativo — Saviacera"
+  description="Encargos personalizados de Savia & Cera para bautizos, baby showers, bodas y regalos corporativos."
+>
+  <!-- Hero -->
+  <section class="container-page py-12 md:py-16">
+    <p class="chip">Encargos personalizados</p>
+    <h1 class="mt-3 font-display text-4xl md:text-5xl leading-tight">
+      Souvenirs y Corporativo
+    </h1>
+    <p class="mt-5 text-lg text-muted max-w-2xl">
+      Diseñamos detalles artesanales hechos a la medida de tu evento o de tu
+      marca. Cada pieza se piensa con intención, combinando velas, jabones,
+      ambientadores y empaques cuidados para que tus invitados — o tu equipo
+      — se lleven algo que se siente personal.
+    </p>
+
+    <div class="mt-7 flex gap-3 flex-wrap">
+      <a
+        href={waHref}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="btn btn-primary"
+      >
+        Hablemos por WhatsApp
+      </a>
+      <a href="/productos" class="btn btn-secondary">
+        Ver nuestros productos
+      </a>
+    </div>
+  </section>
+
+  <!-- What we do -->
+  <section class="bg-surface-muted border-y border-border">
+    <div class="container-page py-12 md:py-16 grid md:grid-cols-3 gap-8">
+      <div>
+        <h3 class="font-display text-2xl">Eventos especiales</h3>
+        <p class="mt-2 text-muted">
+          Bautizos, baby showers, bodas, renovaciones de votos. Velas
+          aromáticas, jabones artesanales y detalles con stickers o etiquetas
+          personalizadas para que cada invitado se lleve un recuerdo de tu
+          momento.
+        </p>
+      </div>
+      <div>
+        <h3 class="font-display text-2xl">Regalos corporativos</h3>
+        <p class="mt-2 text-muted">
+          Kits hechos a mano para tu equipo o tus clientes. Combinamos
+          producto, empaque y un toque artesanal que dice "esto se pensó con
+          tiempo" — algo que un regalo industrial no logra.
+        </p>
+      </div>
+      <div>
+        <h3 class="font-display text-2xl">Cómo trabajamos</h3>
+        <p class="mt-2 text-muted">
+          Cuéntanos el evento, la fecha y la cantidad. Te proponemos opciones
+          de producto, fragancias y empaque, y coordinamos la entrega. Todo
+          por WhatsApp, sin compromisos hasta que te encanta la propuesta.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Gallery -->
+  <section class="container-page py-12 md:py-16">
+    <div class="flex items-end justify-between mb-6">
+      <div>
+        <p class="chip">Trabajos recientes</p>
+        <h2 class="mt-2 font-display text-3xl">Algunos eventos</h2>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+      {
+        gallery.map((g) => (
+          <div class="aspect-square rounded-lg overflow-hidden bg-surface">
+            <img
+              src={g.src}
+              alt={g.alt}
+              class="h-full w-full object-cover"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+        ))
+      }
+    </div>
+    <p class="mt-3 text-xs text-muted italic">
+      Imágenes provisionales — se reemplazarán por fotos reales de los
+      eventos.
+    </p>
+  </section>
+
+  <!-- Closing CTA -->
+  <section class="container-page py-12 md:py-16">
+    <div
+      class="rounded-lg bg-primary text-primary-contrast px-6 py-10 md:p-12 text-center"
+    >
+      <h2 class="font-display text-3xl md:text-4xl">
+        ¿Tienes un evento o un encargo en mente?
+      </h2>
+      <p class="mt-3 max-w-xl mx-auto opacity-90">
+        Escríbenos por WhatsApp con la idea — fecha, cantidad aproximada y el
+        ánimo del evento — y armamos una propuesta hecha a tu medida.
+      </p>
+      <a
+        href={waHref}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="mt-7 inline-block btn bg-background text-foreground hover:bg-surface"
+      >
+        Iniciar conversación
+      </a>
+    </div>
+  </section>
+</BaseLayout>
