@@ -7,14 +7,22 @@ Astro 5 + Tailwind v4 static site. Spanish (DR) primary, English wired up for la
 - [README.md](./README.md) — wife-facing how-to, in Spanish. Stack overview, "cómo agregar un producto", Apps Script + Sheet setup, etc.
 - [THEMING.md](./THEMING.md) — wife-facing theming guide, in Spanish.
 - [ROADMAP.md](./ROADMAP.md) — handoff doc: what's done, what's pending, what needs a decision. Read this first when picking up a session cold.
+- [DECAP-SETUP.md](./DECAP-SETUP.md) — one-time Decap manual setup (GitHub App + Worker secrets + Cloudflare Access), in Spanish. Reference if any of those pieces need to be re-created or rotated.
 - This file (CLAUDE.md) — technical/operating reference for Claude sessions: stack, deploy plumbing, credentials, conventions.
+
+**Current state (2026-05-14)**:
+
+- Site live at `https://saviacera.com` (apex canonical) and `https://www.saviacera.com`.
+- Order flow live: cart → Apps Script `/exec` → Google Sheet row + WhatsApp deep link, all driven by build-time env vars in the Cloudflare dashboard.
+- Decap CMS live and in testing at `https://saviacera.com/innh85dhz2/`. Wife is running smoke tests.
+- GitHub → Workers Builds auto-deploy is live: push to `main` is the deploy.
 
 **Content-management strategy** — two interfaces, same markdown files:
 
-1. **Decap CMS (primary, for the non-technical owner) — not yet built.** Web admin panel at `saviacera.com/admin/`. She logs in (GitHub OAuth, optionally fronted by Cloudflare Access magic link) and edits products through forms. Decap commits to `main`; GH auto-deploy fires; site updates. She doesn't install or learn any tooling. The schema in `src/content.config.ts` is structured for this (flat scalars, simple arrays, no relations). Implementation plan in "Building Decap" below.
+1. **Decap CMS (primary, for the non-technical owner) — live, in testing.** Web admin panel at `saviacera.com/innh85dhz2/` (obscured path). Auth is a **GitHub App bot proxy** in the Worker, gated by **Cloudflare Access** magic-link. The wife does **not** need a GitHub account and is **not** a repo collaborator — all writes are made by the App bot, with her email (from CF Access) annotated into the commit message body. Decap commits to `main`; GH auto-deploy fires; site updates. The schema in `src/content.config.ts` is structured for this (flat scalars, simple arrays, no relations). Architecture details in "Building Decap CMS" below; one-time setup procedure in DECAP-SETUP.md.
 2. **Claude Code skills (for Hector, and as a fallback)** — six skills under `.claude/skills/` drive guided Spanish Q&A flows (`/agregar-producto`, `/editar-producto`, `/borrar-producto`, `/actualizar-foto`, `/cambiar-tema`, `/publicar`). Both interfaces edit the same files; they coexist as long as edits don't overlap in time.
 
-**Long-term direction**: even simpler — products managed via **Google Sheets** with a build hook that pulls the sheet into the site. Design not started; open questions in ROADMAP.md → "Long-term direction".
+**Long-term direction**: even simpler — products managed via **Google Sheets** with a build hook that pulls the sheet into the site. Lower urgency now that Decap is working. Open questions in ROADMAP.md → "Long-term direction".
 
 ## Stack
 
@@ -202,89 +210,60 @@ Each skill ends by pushing to `main`. GitHub auto-deploy is configured, so the p
 
 When updating skills, keep the SKILL.md description tight (one sentence in Spanish, with verbs that match how the user might phrase the request — "agregar producto", "subir un jabón", "nuevo kit", etc.). The description is what Claude uses to decide which skill matches a freeform request.
 
-## Building Decap CMS — code shipped, manual setup pending
+## Building Decap CMS — live, in testing
 
 Decap is the **primary content-management interface for the non-technical owner**.
 
-**Status**: technical pieces shipped in commits ending the Decap-MVP work. The admin URL is intentionally obscured to `saviacera.com/innh85dhz2/` (10-char crypto-random suffix). What's missing is operational glue that requires clicks in the GitHub and Cloudflare dashboards — see [DECAP-SETUP.md](./DECAP-SETUP.md) for the exact click-by-click procedure.
-
-Architecture summary:
-
-- **Auth proxy**: lives in the same Cloudflare Worker as the static-asset binding. `wrangler.jsonc` now declares `main: "./worker/index.ts"` and `assets.binding: "ASSETS"`. The Worker handles `/api/auth` (kicks off OAuth flow, sets a CSRF state cookie) and `/api/callback` (exchanges the GitHub code for a token, posts it back to Decap via `window.postMessage`). All other paths fall through to `env.ASSETS.fetch(request)`.
-- **Secrets**: `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` are Worker secrets, set via `wrangler secret put` or the CF dashboard. **Not** in `.env.local` (that file is for `PUBLIC_*` build-time vars only).
-- **Defense in depth**: (1) obscure URL `/innh85dhz2/`, (2) Cloudflare Access magic-link to wife's email in front of `/innh85dhz2/*` + `/api/*`, (3) GitHub OAuth — only collaborators on `hecvasro/saviacera` can commit.
-- **Token lifecycle**: GitHub OAuth tokens by default don't expire. We rely on collaborator access scoping (token is only useful on the one repo where the user is a collaborator) plus Cloudflare Access as the outer gate. Tokens can be revoked from <https://github.com/settings/applications>.
-
-The rest of this section is the original planning notes, kept for context on schema choices and Decap config decisions.
+**Status**: shipped and in testing. The admin URL is intentionally obscured to `saviacera.com/innh85dhz2/` (10-char crypto-random suffix). The pivot from OAuth App to GitHub App bot proxy happened in commit `09b04ca`. If any of the dashboard-side pieces (GitHub App, Worker secrets, CF Access) need to be re-created or rotated, follow [DECAP-SETUP.md](./DECAP-SETUP.md).
 
 ### Architecture
 
-Decap is a single-page React app loaded from a CDN. It lives at `/admin/` on the site, reads `/admin/config.yml`, and commits content changes directly to git through a backend (GitHub OAuth is the simplest). No server, no database.
+Three layers of defense, all live:
+
+1. **Obscure URL** `/innh85dhz2/` — filters bots / drive-by scanners. Not secret, but raises the bar above zero.
+2. **Cloudflare Access** magic-link (one-time PIN to allow-listed emails) gates `/innh85dhz2/*`, `/api/auth*`, `/api/callback*`. Anonymous Internet traffic never reaches the Worker for those routes. Session duration: 30 days.
+3. **GitHub App** (`Saviacera CMS`) installed only on `hecvasro/saviacera`, with `Contents: read/write` + `Metadata: read`. The Worker mints short-lived (~1h) installation tokens scoped to this one repo. The wife has no GitHub account and is not a repo collaborator — all writes go through the App bot.
+
+The Worker (`worker/index.ts`) handles three routes; everything else falls through to `env.ASSETS.fetch(request)`:
+
+- **`/api/auth`** — returns an HTML page that completes Decap's OAuth handshake protocol (`authorizing:github` echo → `authorization:github:success:<token>` postMessage). The "token" handed to Decap is just the CF Access JWT; Decap's stored token is meaningless to upstream GitHub because the proxy replaces it on every request anyway.
+- **`/api/whoami`** — debug helper that echoes the CF Access email. Useful for smoke-testing the auth chain without involving GitHub.
+- **`/api/github/*`** — proxies to `api.github.com`. Strips client `Authorization`, mints a fresh installation token via `signGithubAppJwt` + `getInstallationToken`, attaches it as `Bearer`. Whitelists only paths under `/repos/hecvasro/saviacera/*` (plus a synthesized response to `/user` so Decap can render an identity).
+
+`wrangler.jsonc` declares `main: "./worker/index.ts"` plus the assets binding with `binding: "ASSETS"`. Because the static-asset binding short-circuits unmatched paths to the 404 page **before** invoking the Worker, `/api/*` is listed under `assets.run_worker_first` to force Worker-first routing for those paths. Without this, `/api/github/*` would 404 from the asset binding before reaching the proxy.
+
+### Editor identity in commit history
+
+Installation tokens commit as the App bot — git log would otherwise just say `saviacera-cms-bot[bot]` for every change, losing the human identity. To preserve who edited what, the proxy intercepts commit-producing requests (`PUT/DELETE /repos/.../contents/*` and `POST /repos/.../git/commits`), parses the JSON body, and appends `\n\nEditado por: <CF Access email> via Cloudflare Access` to the `message` field. The annotation is best-effort: if parsing fails the original body passes through unchanged (commit `c31414c`).
+
+### Repo-permissions rewrite
+
+GitHub returns `repo.permissions` based on the user identity behind the token. With an installation token there is no user, so GitHub returns `push: false / pull: false`, and Decap concludes "your account doesn't have access to this repo." The proxy rewrites the body of `GET /repos/hecvasro/saviacera` to advertise `push: true / pull: true`, matching the real installation permissions. Commit `5f2fc2d`.
+
+### Required Worker secrets
+
+Set in CF Dashboard → Workers & Pages → saviacera → Settings → Variables and Secrets. **Type: Secret**, not Plain text.
+
+- `GITHUB_APP_ID` — the numeric App ID from the GitHub App settings page.
+- `GITHUB_APP_INSTALLATION_ID` — numeric installation ID (visible in the install URL).
+- `GITHUB_APP_PRIVATE_KEY` — PKCS#8 PEM. GitHub exports PKCS#1 (`-----BEGIN RSA PRIVATE KEY-----`); convert with `openssl pkcs8 -topk8 -nocrypt -in IN -out OUT` because Web Crypto in Workers only imports PKCS#8.
+
+If any of these are missing or malformed, `/api/github/*` returns 500 / 502 and Decap fails to load the editor. The full first-time setup is in DECAP-SETUP.md.
+
+### Admin layout
 
 ```
-public/admin/index.html        # Two-line file: loads Decap from CDN.
-public/admin/config.yml        # The CMS schema — collections, fields, auth backend.
-public/uploads/                # Decap-managed image uploads (committed to git).
+public/innh85dhz2/index.html   # Decap loader + auto-click of "Login with GitHub"
+public/innh85dhz2/config.yml   # Decap schema (collections, fields, backend)
+public/uploads/                # Image uploads land here, committed to git
+worker/index.ts                # The auth + GitHub proxy
 ```
 
-### Auth
+`config.yml` maps the Zod schema in `src/content.config.ts` to Decap fields. Schema is intentionally flat (scalars, simple lists, no relations) precisely to fit Decap's widget set. Update `config.yml` and `src/content.config.ts` in lockstep when the schema changes.
 
-**Recommended**: GitHub OAuth via the **Decap GitHub backend**. Requires:
+### Theme collection (planned polish, not built)
 
-1. A GitHub OAuth App. Cloudflare provides a free OAuth proxy for Decap via Cloudflare Pages Functions (alternative to running your own — Decap docs link the example).
-2. The owner has a GitHub account and is added as a **collaborator with write access** to `hecvasro/saviacera`. That collaborator membership is the only authorization gate — Decap delegates entirely to GitHub.
-3. Optional extra layer: **Cloudflare Access** in front of `/admin/*`. Free for ≤50 users. Magic-link to email. Filters out drive-by traffic before even reaching the GitHub login.
-
-The combination = the "password protection" mentioned in conversation: email-magic-link to reach `/admin/`, then GitHub OAuth to authenticate the actual edit session.
-
-### Collections to define
-
-Map the Zod schema in `src/content.config.ts` to Decap. The current schema is intentionally flat for this:
-
-```yaml
-collections:
-  - name: products
-    label: Productos
-    folder: src/content/products
-    format: yaml-frontmatter
-    create: true
-    slug: '{{slug}}'                       # filename = slug (Astro convention)
-    fields:
-      - { name: name,        label: Nombre,        widget: string }
-      - { name: tagline,     label: Frase corta,   widget: string, required: false }
-      - { name: description, label: Descripción,   widget: text }
-      - name: category
-        label: Categoría
-        widget: select
-        options: [velas, jabones, kits]
-      - { name: tags,        label: Etiquetas,     widget: list, required: false }
-      - { name: priceDOP,    label: Precio (DOP),  widget: number, value_type: int, min: 0 }
-      - { name: sku,         label: SKU,           widget: string, required: false }
-      - { name: stock,       label: Inventario,    widget: number, value_type: int, min: 0, required: false }
-      - { name: available,   label: Disponible,    widget: boolean, default: true }
-      - name: images
-        label: Fotos
-        widget: list
-        field: { name: image, label: Imagen, widget: image }
-      - name: includes
-        label: "Incluye (solo kits)"
-        widget: list
-        required: false
-        field: { name: item, label: Item, widget: string }
-      - name: details
-        label: Detalles
-        widget: list
-        required: false
-        field: { name: detail, label: Detalle, widget: string }
-      - { name: featured,    label: Destacado,     widget: boolean, default: false }
-      - { name: order,       label: Orden,         widget: number, value_type: int, default: 100 }
-      - { name: createdAt,   label: Fecha,         widget: datetime, required: false }
-      - { name: body,        label: Texto largo,   widget: markdown }
-```
-
-### Theme/config collection (for fonts + colors via Decap)
-
-A second collection for site-wide theme settings. Single-file collection backed by a JSON or YAML config that the build reads at build time and injects into `tokens.css` (or as inline CSS variables in `BaseLayout.astro`):
+The next polish step is a `theme` files-collection so the wife can change fonts, colors, and logo through the same panel rather than via the `cambiar-tema` skill. Sketch:
 
 ```yaml
   - name: theme
@@ -299,36 +278,14 @@ A second collection for site-wide theme settings. Single-file collection backed 
           - { name: fontLogo,    label: "Fuente del logo",       widget: string, required: false }
           - { name: colorAccent, label: "Color de acento",       widget: color }
           - { name: colorBackground, label: "Color de fondo",    widget: color }
-          # ... etc per the tokens.css palette
           - { name: logoImage,   label: "Imagen del logo (opcional)", widget: image, required: false }
 ```
 
-Build wiring: a small Astro integration or pre-build script reads `src/content/theme/site.json` and writes the relevant `:root { --color-accent: …; --font-display: …; }` overrides. The Google Fonts `<link>` in `BaseLayout.astro` becomes a template that fills in the chosen `fontDisplay` and `fontBody` names. If `logoImage` is set, `Header.astro` renders the `<img>`; otherwise it renders the wordmark text.
-
-This means **she changes a font from a dropdown / text field in Decap, and the site picks it up** without anyone touching tokens.css.
-
-### Logo handling
-
-The current Header renders the wordmark as text. Two future states (the `cambiar-tema` skill documents both for the owner):
-
-- **Wordmark only**: text in `--font-display` (today) or `--font-logo` if separated.
-- **Image logo**: an SVG/PNG in `public/logo.svg` (or uploaded via Decap to `public/uploads/`). `Header.astro` conditionally renders `<img src={logoImage} alt="Saviacera" />` when set, otherwise falls back to text.
-
-Either works. Keep both code paths so it's an asset decision, not a code change.
-
-### Order of operations when building Decap
-
-1. **Wire GH→CF auto-deploy first** (ROADMAP P1). Without it Decap commits go nowhere visible.
-2. Create the GitHub OAuth App + the auth proxy (either via Cloudflare Pages Functions example or a hosted service).
-3. Add `public/admin/index.html` + `public/admin/config.yml` with the products collection only. Smoke-test add-a-product end to end.
-4. Add the `theme` collection + build wiring. Smoke-test font change end to end.
-5. (Optional) Put Cloudflare Access in front of `/admin/*` with magic-link to the owner's email.
-6. Onboard the owner: add as repo collaborator, send her the `/admin/` URL.
-7. Update CLAUDE.md + README.md to mark Decap as "active" (replacing "próximamente").
+Wiring: a small Astro integration or pre-build script reads `src/content/theme/site.json` and writes `:root { --color-accent: …; --font-display: …; }` plus a Google Fonts `<link>` URL into `BaseLayout.astro`. If `logoImage` is set, `Header.astro` conditionally renders `<img>`; else falls back to wordmark text. Not blocking — pick up after wife signs off on the products workflow.
 
 ### Coexistence with skills
 
-Both interfaces edit the same markdown files. The risk is concurrent edits to the same product — git pull-before-edit handles 99% of it, but practically the two humans should coordinate ("I'm editing the cart kit, hands off for 10 min"). Worth flagging in the wife-onboarding chat.
+Both interfaces edit the same markdown files. Concurrent edits to the same product are the only real risk — `git pull --rebase` before any skill-driven edit handles 99% of it; practically the two humans coordinate verbally for the rest. Mention this when onboarding her.
 
 ## Repo conventions
 
