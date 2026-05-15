@@ -13,8 +13,8 @@ tags:
 priceDOP: 3500
 available: true
 images:
-  - /uploads/142490b5-dda7-44be-92db-6d0db7461e22.jpeg
   - /uploads/e9abea6a-ae3e-4910-b40f-0136da3c064c.jpeg
+  - /uploads/142490b5-dda7-44be-92db-6d0db7461e22.jpeg
   - /uploads/img_0932.jpg
 includes:
   - 'Vela aromática "Mamá" – 10 onzas  – Aroma: Wild Rose, Drift & Bloom o Pink
