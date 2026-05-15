@@ -1,23 +1,22 @@
 ---
-name: "Morning Brew "
+name: Drift & Bloom
 tagline: Vela aromática de 10 oz.
-description: Una mañana lenta de domingo, el silencio de la casa se entrelaza
-  con el sonido de la cafetera; envuelves tus manos alrededor de tu taza de cafe
-  favorita y dejas que el aroma a café recien colado te devuelva, poco a poco,
-  los sentidos.
+description: Inspirada en el encuentro del mar con la tierra, esta vela fusiona
+  la pureza de la sal marina con la elegancia atemporal de las orquídeas
+  frescas. Con un corazón de jazmín y una base suave de haba tonka
 category: velas
 tags:
   - vela
   - aromaticos
-  - gourmand
-  - dulce
-  - vainilla
+  - floral
+  - marina
 priceDOP: 1500
 available: true
 images:
-  - /uploads/64a81515-1c51-4ecf-9ee0-16e6b8f0e2df.jpeg
+  - /uploads/e6c27d7d-38b0-44c4-b789-0a81645ca1d3.jpeg
 details:
-  - "Notas: café, vainilla y caramelo."
+  - Vela aromática de cera de coco y soya, 10 oz.
+  - "Notas: ozono, sal de mar, jazmín, freesia, haba tonka y naranja."
 featured: true
 order: 100
 ---
