@@ -10,6 +10,8 @@ tags:
   - aromaticos
   - floral
   - marina
+  - relajante
+  - mood-booster
 priceDOP: 1500
 available: true
 images:
