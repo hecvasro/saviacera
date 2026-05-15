@@ -62,7 +62,12 @@ const products = defineCollection({
       // (picsum placeholders) and Decap-uploaded paths like "/uploads/foo.jpg"
       // served from public/. image() handles relative-path imports for
       // bundled assets. Templates render whichever shape comes in.
-      images: z.array(z.union([z.string(), image()])).min(1),
+      //
+      // NOT required: Decap's list widget can't enforce a minimum, so a
+      // product created without a photo would otherwise fail the whole
+      // build and freeze every other pending change. Default to [] and let
+      // templates fall back to a placeholder until a photo is uploaded.
+      images: z.array(z.union([z.string(), image()])).default([]),
 
       // Kit-specific. Optional everywhere else so the schema stays one shape.
       includes: z.array(z.string()).default([]),

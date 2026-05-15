@@ -51,6 +51,12 @@ collections:
     folder: src/content/products
     create: true
     delete: true
+    # identifier_field: Decap defaults to `title` for slug + entry identity.
+    # Our schema has no `title` (it uses `name`); without this line Decap
+    # can't resolve {{slug}} and falls back to serializing the whole entry
+    # into the filename (e.g. "map-name-...-pricedop-250.md"). Point it at
+    # `name` so {{slug}} = slugify(name) → "morning-brew.md".
+    identifier_field: name
     slug: "{{slug}}" # filename = slug (Astro convention)
     format: yaml-frontmatter
     summary: "{{name}} — RD${{priceDOP}} ({{category}})"

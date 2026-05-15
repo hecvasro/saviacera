@@ -2,6 +2,7 @@
 import { getCollection, render } from "astro:content";
 import BaseLayout from "~/layouts/BaseLayout.astro";
 import PriceTag from "~/components/PriceTag.astro";
+import { imageSrc, PLACEHOLDER_IMAGE } from "~/lib/images";
 
 export async function getStaticPaths() {
   const products = await getCollection("products");
@@ -13,10 +14,8 @@ export async function getStaticPaths() {
 
 const { product } = Astro.props;
 const { Content } = await render(product);
-const images = product.data.images.map((img) =>
-  typeof img === "string" ? img : img.src,
-);
-const cover = images[0];
+const images = product.data.images.map((img) => imageSrc(img));
+const cover = images[0] ?? PLACEHOLDER_IMAGE;
 const categoryLabel: Record<string, string> = {
   velas: "Vela",
   ambientadores: "Ambientador",

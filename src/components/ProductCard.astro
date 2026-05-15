@@ -1,14 +1,14 @@
 ---
 import type { CollectionEntry } from "astro:content";
 import PriceTag from "./PriceTag.astro";
+import { imageSrc } from "~/lib/images";
 
 interface Props {
   product: CollectionEntry<"products">;
 }
 
 const { product } = Astro.props;
-const cover = product.data.images[0];
-const coverSrc = typeof cover === "string" ? cover : cover.src;
+const coverSrc = imageSrc(product.data.images[0]);
 ---
 
 <a
