@@ -2,7 +2,7 @@
 
 Status snapshot, what's done, what's pending, and what needs a decision before it can proceed. The wife-facing how-to lives in [README.md](./README.md) (Spanish). The technical/operating reference lives in [CLAUDE.md](./CLAUDE.md). This file is the **handoff doc** — kept terse and actionable so a future Claude session (or you, returning a week later) can pick up cold.
 
-Last updated: 2026-05-14.
+Last updated: 2026-05-15.
 
 ## Status snapshot
 
@@ -11,7 +11,7 @@ Last updated: 2026-05-14.
 - **Hosting**: Cloudflare Workers Static Assets, Worker name `saviacera`, configured by `wrangler.jsonc`. Migrated off Cloudflare Pages on 2026-05-12.
 - **CI/Deploy**: GitHub → Cloudflare Workers Builds auto-deploy is **live**. Every push to `main` triggers a Cloudflare-side build + `wrangler deploy`. `npm run deploy` remains as a manual fallback.
 - **Order flow**: **live**. `src/lib/checkout.ts` reads `PUBLIC_ORDER_ENDPOINT` and `PUBLIC_WHATSAPP_NUMBER` from `import.meta.env`. The Apps Script `/exec` endpoint is deployed and smoke-tested (`SAV-TEST-0001` appended to the Google Sheet). `Footer.astro` reads the env-driven WhatsApp number.
-- **Decap CMS**: **live and in testing**. Admin at `https://saviacera.com/innh85dhz2/` (obscured path). Auth model is a **GitHub App bot proxy** in the Worker — the wife does **not** need a GitHub account and is **not** a repo collaborator. All writes flow through the Worker as the App bot, with the editor's Cloudflare Access email annotated into each commit message. Wife is currently running smoke tests.
+- **Decap CMS**: **live, end-to-end validated by the owner**. Admin at `https://saviacera.com/innh85dhz2/` (obscured path). Auth model is a **GitHub App bot proxy** in the Worker — the wife does **not** need a GitHub account and is **not** a repo collaborator. All writes flow through the Worker as the App bot, with the editor's Cloudflare Access email annotated into each commit message. Edit + create both confirmed working through the live site after the schema-brittleness fix on 2026-05-15 (see Done → "Schema brittleness fix").
 - **Content**: 3 sample products in `src/content/products/` — `jabon-cafe-cacao`, `set-san-valentin`, `vela-coco-vainilla` (placeholder photos pending real shoot).
 - **Content-management strategy**: two interfaces sharing the same markdown files.
   - **Decap CMS** at `saviacera.com/innh85dhz2/` — primary path for the non-technical owner.
@@ -37,10 +37,11 @@ Last updated: 2026-05-14.
   - Commit messages annotated with editor's CF Access email so `git log` shows who made each change.
   - "Login with GitHub" button auto-clicked on admin entry so the wife never sees it.
 - [x] **4-umbrella catalog taxonomy** live: Aromáticos / Cuidado personal / Sets / Personalizados. Old `velas` / `jabones` / `kits` pages replaced; Header, Footer, and home intro updated to match.
+- [x] **Schema brittleness fix** (commit `783a4c4`, 2026-05-15). The first wave of Decap edits committed to `main` but never reached production because `astro check && astro build` was failing every build. Two unrelated Zod constraints didn't match what Decap actually serializes: (a) `stock: z.number().optional()` rejected the empty-input `stock: ""` (string) that Decap writes when a non-required number widget is left blank, and (b) `images: z.union([z.string().url(), image()])` rejected Decap's root-relative `/uploads/foo.jpg` paths (not full URL, not relative import). Removed `stock` entirely (no inventory tracking) and loosened the image union to `z.string()`. See Operating notes → "Decap-Zod schema brittleness".
 
 ## In-flight
 
-- **Wife testing Decap CMS** — smoke tests in progress (edit existing product, save, verify commit + redeploy land on the live site). She's already made successful CMS commits to `main` (see `1da4203` and `9cd3a6d`, `CMS: actualizar Producto «set-san-valentin»`).
+- **Owner ramp-up on Decap CMS** — edit and create flows both confirmed end-to-end after the 2026-05-15 schema fix. Remaining: wife expanding the real catalog (see Pending → "Real product photography + catalog content") and getting comfortable with the editor without coaching.
 
 ## Pending
 
@@ -70,6 +71,7 @@ The three sample products use placeholder images. Replace once real photos exist
 
 ## Short-term backlog (after wife signs off on Decap testing)
 
+- [ ] **Build-failure alerting.** The 2026-05-15 incident hid a broken pipeline for ~9h because nobody was watching. Decap reports "Published" the moment the commit lands; whether Cloudflare's subsequent build actually deployed is invisible to her. Options, cheapest first: (a) Cloudflare Workers Builds email-on-failure (dashboard toggle, free); (b) a tiny GitHub Actions job on `push: main` that pings a webhook if `astro build` fails; (c) a status pill on the Decap admin page that polls the latest CF deploy time and warns if it's lagging behind `main`'s tip. Pick one.
 - [ ] **Sitemap + robots.txt**. Astro has `@astrojs/sitemap` integration — one-liner setup. (Currently the `/innh85dhz2/` page has its own `noindex` meta — site-wide sitemap should explicitly exclude that path.)
 - [ ] **Basic SEO**: per-page `<title>` / `<meta description>` / OG tags. `BaseLayout.astro` likely already takes a `title` prop; audit.
 - [ ] **Analytics**. Cloudflare Web Analytics (free, no cookie banner) is the lowest-friction option.
@@ -94,7 +96,6 @@ None of this is blocking.
 
 - Bilingual content (`en` locale already scaffolded in `astro.config.mjs` but no English content yet).
 - Newsletter signup / email capture for repeat customers.
-- Stock-aware UI (`stock` and `available` fields exist in the schema but aren't surfaced).
 - Maybe: real payment (Azul, CardNet, or similar DR processor) — explicitly excluded for v1.
 
 ## Operating notes for future Claude sessions
@@ -106,3 +107,4 @@ None of this is blocking.
 - **Token scope policy**: minimum required scopes for each operation listed in CLAUDE.md → "API token scopes". If a list endpoint returns empty + `success: true`, suspect missing read scope before concluding the resource doesn't exist.
 - **Commit identity**: `hecvasro <8771303+hecvasro@users.noreply.github.com>` — enforced by `~/.gitconfig` global, not repo-local. Decap-driven commits come through the GitHub App bot, attributed to `saviacera-cms-bot[bot]` with the editor's email noted in the commit body.
 - **Production env vars live in the Cloudflare dashboard**, not `.env.local`. Local `.env.local` only affects `npm run dev` / `npm run build` on Hector's machine. Don't assume `.env.local` reflects what's deployed.
+- **Decap-Zod schema brittleness.** Decap's number / date widgets with `required: false` serialize an empty input as `""` (string), not as an omitted key. A `z.number().optional()` rejects that and the build dies silently on Cloudflare. When adding a new optional numeric or datetime field to `src/content.config.ts`, either (a) make it truly required in Decap so the editor enforces a value, or (b) wrap the Zod field in `z.preprocess((v) => v === "" ? undefined : v, ...)` so empties coerce to `undefined`. Image-path fields: prefer plain `z.string()` over `z.string().url()` because Decap writes `/uploads/foo.jpg` (root-relative, served from `public/`), which is neither a full URL nor a relative import for `image()`. Always run `npm run build` locally after touching the schema or `public/innh85dhz2/config.yml` — same command Cloudflare runs.

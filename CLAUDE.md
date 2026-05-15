@@ -261,6 +261,18 @@ worker/index.ts                # The auth + GitHub proxy
 
 `config.yml` maps the Zod schema in `src/content.config.ts` to Decap fields. Schema is intentionally flat (scalars, simple lists, no relations) precisely to fit Decap's widget set. Update `config.yml` and `src/content.config.ts` in lockstep when the schema changes.
 
+### Schema brittleness — what Decap actually writes
+
+Decap's serializer doesn't omit keys for empty optional inputs; it writes empty strings. A `widget: number, required: false` with no value produces `field: ""` in the YAML frontmatter, not an absent key. A `z.number().optional()` rejects that — `astro check && astro build` exits non-zero on Cloudflare, the deploy is skipped, and from the editor's perspective the publish appeared to succeed (the commit landed) while the site silently stayed on the previous build. This bit us through commits `9cd3a6d` and `1da4203` until `783a4c4` on 2026-05-15.
+
+Rules of thumb when adding a field:
+
+- **Optional numeric / datetime**: either make it `required: true` in `config.yml` so the editor enforces a value, or wrap the Zod side in `z.preprocess((v) => v === "" ? undefined : v, z.number().optional())` so the empty string coerces to `undefined`. Don't trust `.optional()` alone.
+- **Image paths**: prefer `z.union([z.string(), image()])` over `z.union([z.string().url(), image()])`. Decap's `media_folder: public/uploads` + `public_folder: /uploads` config means it writes `/uploads/foo.jpg` (root-relative), which is neither a full URL nor a relative import. Templates already fork on `typeof img === "string"`.
+- **Required arrays with `.min(1)`** (like `images`): the build still dies if the editor saves with the list empty. Either keep the floor and tell the editor "every product needs at least one photo" in the field hint, or relax it.
+
+When in doubt, `npm run build` locally after editing the schema or `config.yml`. That's the exact command Cloudflare runs, so anything that passes locally will pass on the auto-deploy. The Worker `astro check` step does require `@cloudflare/workers-types` to be installed — run `npm install` in a fresh worktree first or it'll fail on TypeScript errors that don't reflect production.
+
 ### Theme collection (planned polish, not built)
 
 The next polish step is a `theme` files-collection so the wife can change fonts, colors, and logo through the same panel rather than via the `cambiar-tema` skill. Sketch:

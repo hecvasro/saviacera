@@ -1,6 +1,6 @@
 # Saviacera
 
-Sitio web para Saviacera — velas de soya, jabones y kits artesanales hechos a mano en República Dominicana.
+Sitio web para Saviacera — velas de soya, jabones, ambientadores y sets artesanales hechos a mano en República Dominicana.
 
 Stack: [Astro](https://astro.build) + TypeScript + [Tailwind CSS v4](https://tailwindcss.com). Catálogo en Markdown via Astro Content Collections (Zod). Sin pasarela de pagos: el "checkout" registra el pedido en una hoja de Google y abre WhatsApp con el resumen prellenado.
 
@@ -10,18 +10,25 @@ Producción: **https://saviacera.com**.
 
 ## Administrar el sitio
 
-Hay **dos formas** de actualizar el catálogo. La idea es que la dueña use el **panel web (Decap CMS)** cuando esté listo — abre un formulario en `saviacera.com/admin/`, llena los campos, le da a guardar y el sitio se actualiza solo. Mientras tanto, Hector puede usar **Claude Code** desde su computadora.
+Hay **dos formas** de actualizar el catálogo. La idea es que la dueña use el **panel web (Decap CMS)** desde el navegador. Hector tiene como respaldo **Claude Code** desde su computadora.
 
-### Opción A — Panel web (Decap CMS) — *próximamente*
+### Opción A — Panel web (Decap CMS)
 
-> Esto todavía no está activo. Cuando esté listo, será la forma principal para que María administre el sitio sin instalar nada.
+Entras a **https://saviacera.com/innh85dhz2/** (esa dirección rara al final es a propósito — la mantenemos discreta para que no aparezca en buscadores).
 
-- Entras a https://saviacera.com/admin/
-- Te pide login (con tu cuenta de GitHub o con un código que te llega por email, dependiendo de cómo lo configuremos).
-- Te aparece una lista de productos con un botón "Nuevo producto" y editar/borrar para los existentes.
-- Llenas el formulario (nombre, precio, foto, etc.), le das a "Publish" y listo — el sitio se actualiza solo en menos de un minuto.
+Cómo funciona:
 
-Status actual: planeado pero sin construir. Ver [ROADMAP.md](./ROADMAP.md) para cuándo se hace.
+1. Te aparece una pantalla que dice "Iniciar sesión" — escribes tu correo (el que tienes autorizado).
+2. Te llega un código de 6 dígitos al correo. Lo pegas y entras.
+3. Te aparece la lista de productos con botones para crear, editar y borrar.
+4. Llenas el formulario (nombre, precio, fotos, etc.) y le das a **Publish**.
+5. En menos de 1–2 minutos el cambio queda vivo en saviacera.com.
+
+Notas:
+
+- **No necesitas cuenta de GitHub** ni instalar nada. Todo se hace desde el navegador.
+- Los cambios quedan registrados con tu correo, así que en el historial se ve quién hizo qué.
+- Si dejas un campo de número vacío (por ejemplo "Orden") sin querer, el sitio puede no actualizarse. En ese caso entras al panel, abres el producto y completas el número.
 
 ### Opción B — Claude Code (para Hector, o como respaldo)
 
@@ -29,8 +36,8 @@ Si Hector tiene Claude Code abierto en la carpeta del proyecto, puede usar estos
 
 | Comando              | Para qué                                                                 |
 | -------------------- | ------------------------------------------------------------------------ |
-| `/agregar-producto`  | Crear un producto nuevo (vela, jabón, o kit). Pregunta nombre, precio, descripción, foto, etc. |
-| `/editar-producto`   | Cambiar algo de un producto existente — precio, stock, descripción, orden, etc. |
+| `/agregar-producto`  | Crear un producto nuevo (vela, jabón, ambientador, set, etc.). Pregunta nombre, precio, descripción, foto, etc. |
+| `/editar-producto`   | Cambiar algo de un producto existente — precio, descripción, orden, disponibilidad, etc. |
 | `/actualizar-foto`   | Reemplazar o agregar la foto de un producto.                             |
 | `/borrar-producto`   | Despublicar (quitar del sitio) o eliminar un producto.                   |
 | `/cambiar-tema`      | Cambiar colores, tipografías (fuentes), o tamaños del tema visual del sitio. |
@@ -57,11 +64,15 @@ Si en cualquier momento no estás seguro de algo, escribe **"explícame esto"** 
 
 ```bash
 npm install
-cp .env.example .env       # luego edita .env si quieres apuntar a un endpoint real
+cp .env.example .env.local           # variables públicas del sitio (PUBLIC_*)
+cp .envrc.local.example .envrc.local # credenciales de Cloudflare para deploy manual
+direnv allow                         # carga ambos archivos en el shell
 npm run dev
 ```
 
 El servidor de desarrollo corre en `http://localhost:4321`.
+
+Sólo Hector necesita `.envrc.local` (es para el `npm run deploy` de respaldo). En producción, las variables `PUBLIC_*` se configuran en el dashboard de Cloudflare; lo que está en `.env.local` no llega al sitio en vivo, sólo al `npm run dev`/`npm run build` local. Detalles en [CLAUDE.md](./CLAUDE.md).
 
 Comandos útiles:
 
@@ -82,6 +93,10 @@ Comandos útiles:
 ├── apps-script/
 │   └── Code.gs                    # Google Apps Script que recibe los pedidos
 ├── public/                        # archivos estáticos servidos tal cual
+│   ├── innh85dhz2/                # panel admin de Decap CMS (URL obscurecida)
+│   │   ├── index.html             # cargador de Decap (auto-clic al login)
+│   │   └── config.yml             # esquema del CMS (debe ir parejo con content.config.ts)
+│   └── uploads/                   # fotos subidas desde Decap, commiteadas al repo
 ├── src/
 │   ├── components/                # piezas de UI Astro
 │   ├── content/
@@ -95,15 +110,21 @@ Comandos útiles:
 │   │   └── format.ts              # formato DOP (es-DO)
 │   ├── pages/
 │   │   ├── index.astro            # /
-│   │   ├── velas.astro            # /velas (con filtro por tag)
-│   │   ├── jabones.astro          # /jabones
-│   │   ├── kits.astro             # /kits (agrupado por temporada)
+│   │   ├── aromaticos.astro       # /aromaticos (velas, ambientadores, difusores)
+│   │   ├── cuidado-personal.astro # /cuidado-personal (jabones, etc.)
+│   │   ├── sets.astro             # /sets
+│   │   ├── personalizados.astro   # /personalizados (souvenirs / corporativo, vía WhatsApp)
+│   │   ├── productos/
+│   │   │   ├── index.astro        # /productos (catálogo completo)
+│   │   │   └── [slug].astro       # /productos/<slug>
 │   │   ├── carrito.astro          # /carrito
-│   │   ├── 404.astro
-│   │   └── productos/[slug].astro # /productos/<slug>
+│   │   └── 404.astro
 │   └── styles/
 │       ├── tokens.css             # variables de marca (colores, tipo, etc.)
 │       └── global.css             # entrada Tailwind + tema
+├── worker/
+│   └── index.ts                   # Cloudflare Worker: auth + proxy GitHub para Decap
+├── wrangler.jsonc                 # config del Worker (assets + worker script)
 ├── astro.config.mjs
 ├── eslint.config.js
 ├── package.json
@@ -124,15 +145,14 @@ Comandos útiles:
    tagline: "Floral con un toque especiado"
    description: |
      Texto largo que describe el producto.
-   category: "velas"          # "velas" | "jabones" | "kits"
-   tags: ["floral"]            # libres; en kits úsalos para temporada
+   category: "velas"          # "velas" | "ambientadores" | "difusores" | "jabones" | "sets" | "otros"
+   tags: ["floral"]            # libres; en sets úsalos para temporada
    priceDOP: 850
    sku: "VEL-ROS-CAR-200"
-   stock: 24
    available: true
    images:
      - "https://picsum.photos/seed/vela-rosas/800/800"
-   includes: []                # solo para kits: lista de cosas dentro del kit
+   includes: []                # solo para sets: lista de cosas dentro del set
    details:
      - "Aroma: rosas + cardamomo"
      - "Duración: ~40h"
@@ -142,7 +162,7 @@ Comandos útiles:
    ---
    ```
 
-3. Si quieres usar imágenes locales en lugar de placeholders, ponlas en `src/assets/products/<slug>/` y en el frontmatter usa rutas relativas (`./hero.jpg`). El schema acepta strings (URLs) y refs locales.
+3. Si quieres usar fotos reales en lugar de placeholders, ponlas en `public/uploads/` (Decap también las pone ahí cuando subes desde el panel). En el frontmatter referéncialas con path desde la raíz: `/uploads/mi-foto.jpg`. El schema acepta tanto URLs completas (picsum y similares) como rutas `/uploads/...`.
 
 4. Reinicia `npm run dev` si recién creaste la carpeta del producto.
 
@@ -160,19 +180,26 @@ El campo `featured: true` controla otra cosa distinta: si el producto aparece de
 
 ### Categorías
 
-Las categorías activas hoy son tres y están "cableadas" en el código (cada una tiene su página propia y un valor permitido en el schema):
+El catálogo está organizado en **6 categorías** (valor permitido en `category:` en el frontmatter) agrupadas en **4 "paraguas"** (cada paraguas tiene su página de listado):
 
-- **velas** → aparecen en `/velas` (con filtro por tag).
-- **jabones** → aparecen en `/jabones`.
-- **kits** → aparecen en `/kits`. Los kits son productos normales: misma forma, sólo con `category: "kits"` y un tag de temporada (`san-valentin`, `dia-de-las-madres`, `dia-del-maestro`, `navidad`, `regalo`). El campo `includes` es una lista de strings — qué viene dentro del kit.
+| Categoría        | Paraguas / página              | Notas                                                                 |
+| ---------------- | ------------------------------ | --------------------------------------------------------------------- |
+| `velas`          | Aromáticos → `/aromaticos`     | Velas de soya.                                                        |
+| `ambientadores`  | Aromáticos → `/aromaticos`     | Room sprays, aceites, etc.                                            |
+| `difusores`      | Aromáticos → `/aromaticos`     | Difusores de varilla / cerámica.                                      |
+| `jabones`        | Cuidado personal → `/cuidado-personal` | Jabones artesanales. Acá entran a futuro: aceites faciales, bálsamos. |
+| `sets`           | Sets → `/sets`                 | Bundles. Usa `tags` para temporada (`san-valentin`, `dia-de-las-madres`, etc.) y `includes:` para listar qué viene dentro. |
+| `otros`          | (sin página dedicada)          | Comodín para algo nuevo que aún no encaje en un paraguas. Sale en `/productos` y nada más.        |
+
+Aparte está **Souvenirs y Corporativos** en `/personalizados` — pero ése no es un producto del catálogo, es una página de contacto/cotización por WhatsApp.
 
 #### Cómo agregar una categoría nueva
 
-Agregar una categoría completamente nueva (digamos `aceites`) requiere tres cambios pequeños en el código — no se puede hacer sólo desde un `.md`. Si quieres una categoría nueva, dímelo y la dejamos lista en un solo PR. Los tres cambios son:
+Agregar un valor nuevo al schema (digamos `aceites`) requiere tres cambios pequeños en el código — no se puede hacer sólo desde un `.md` ni desde Decap. Si quieres una categoría nueva, dímelo y la dejamos lista en un solo PR. Los tres cambios son:
 
-1. Añadir `"aceites"` al `z.enum([...])` en `src/content.config.ts`.
-2. Crear `src/pages/aceites.astro` (copiando `jabones.astro` como base y cambiando el filtro `category`).
-3. Agregar el link "Aceites" al menú en `src/components/Header.astro` y al footer en `src/components/Footer.astro`.
+1. Añadir `"aceites"` al `z.enum([...])` en `src/content.config.ts` (y al `select` de `public/innh85dhz2/config.yml` en paralelo, sino Decap no la deja escoger).
+2. Decidir bajo qué paraguas vive: si entra en uno existente (p. ej. Aromáticos), basta con incluirla en el filtro de `src/pages/aromaticos.astro`. Si necesita paraguas propio, crear `src/pages/<paraguas>.astro` copiando uno existente como base.
+3. Agregar el link al menú en `src/components/Header.astro` y al footer en `src/components/Footer.astro` si abriste paraguas nuevo.
 
 Cuando exista el CMS de Google Sheets (ver "Futuro" abajo), agregar categorías será literalmente añadir una fila a una hoja — sin tocar código.
 
@@ -234,28 +261,48 @@ Lee **[THEMING.md](./THEMING.md)** — escrito para no-developers.
 
 ## Despliegue (Cloudflare Workers Static Assets)
 
-El sitio está en producción en **https://saviacera.com** (y `www.saviacera.com`). Hosting en **Cloudflare Workers Static Assets** (Worker `saviacera`, configurado en `wrangler.jsonc`). Los despliegues son manuales por ahora — un solo comando desde la terminal:
+El sitio está en producción en **https://saviacera.com** (y `www.saviacera.com`). Hosting en **Cloudflare Workers Static Assets** (Worker `saviacera`, configurado en `wrangler.jsonc`).
 
-```bash
-npm run deploy
-```
-
-Eso corre `astro check && astro build` y luego `wrangler deploy`, que sube `dist/` como assets del Worker. La nueva versión queda viva en `saviacera.com` en pocos segundos.
-
-También hay `npm run deploy:preview` que sube una nueva *version* del Worker sin promoverla a producción (`wrangler versions upload`) — útil para mostrarle algo a alguien sin tocar la versión que sirve `saviacera.com`.
+**Auto-deploy desde GitHub está vivo.** Cada push a la rama `main` dispara un build en Cloudflare Workers Builds que corre `npm run build && npx wrangler deploy`. En 1–2 minutos el sitio queda actualizado. En la práctica esto significa que **publicar es hacer commit + push** — y eso pasa solo cuando la dueña le da "Publish" en Decap, o cuando una skill termina su flujo con `/publicar`.
 
 ### Workflow para publicar cambios
 
-1. Editar lo que sea (un producto, el theme, un componente).
-2. `npm run dev` para verlo en local (`http://localhost:4321`).
-3. Cuando estés conforme: `npm run deploy`.
-4. Listo — saviacera.com sirve la nueva versión.
+Para la dueña vía Decap (camino normal):
 
-Importante: las variables de entorno (Apps Script endpoint, número de WhatsApp) se leen del archivo `.env.local` **al momento del build**. Si cambias esos valores tienes que correr `npm run deploy` para que la producción los recoja.
+1. Editar en `saviacera.com/innh85dhz2/`, le da Publish, listo.
+2. En 1–2 minutos el cambio está vivo.
+
+Para Hector vía Claude Code / skills:
+
+1. Correr el skill que aplique (`/agregar-producto`, `/editar-producto`, etc.) o hacer cambios manuales.
+2. La skill termina con commit + push automático. Si editaste a mano, corre `/publicar`.
+3. Igual que arriba — el push a `main` dispara el build y deploy.
+
+Para Hector con cambios técnicos (componentes, schema, infra):
+
+1. Editar.
+2. `npm run dev` para verlo en local.
+3. **Importante: `npm run build` localmente antes de pushear**, sobre todo si tocaste `src/content.config.ts` o `public/innh85dhz2/config.yml`. Es el mismo comando que corre Cloudflare — si pasa local, pasa en el deploy.
+4. Commit + push a `main`.
+
+### Despliegue manual (respaldo)
+
+Si el auto-deploy está caído o quieres saltarte el flujo de GitHub:
+
+```bash
+npm run deploy           # build + wrangler deploy directo a producción
+npm run deploy:preview   # sube una versión del Worker sin promoverla
+```
+
+`deploy:preview` deja una URL temporal para mostrarle el cambio a alguien sin tocar la versión que sirve `saviacera.com`.
+
+### Variables de entorno
+
+Las variables `PUBLIC_*` (endpoint de Apps Script, número de WhatsApp) **viven en el dashboard de Cloudflare** — Settings → Variables and Secrets → Build vars. Esas son las que el build de producción ve. El `.env.local` local sólo afecta `npm run dev` / `npm run build` en la máquina de Hector. Si necesitas cambiar una variable de producción, cámbiala en el dashboard y dispara un nuevo build (basta con cualquier push a `main`, aunque sea un commit vacío).
 
 ### Detalles técnicos
 
-Si necesitas tocar la infra (credenciales, dominio, scopes del token de Cloudflare), eso vive en [CLAUDE.md](./CLAUDE.md). El estado actual y lo que falta vive en [ROADMAP.md](./ROADMAP.md).
+Si necesitas tocar la infra (credenciales, dominio, scopes del token de Cloudflare, setup de Decap), eso vive en [CLAUDE.md](./CLAUDE.md) y [DECAP-SETUP.md](./DECAP-SETUP.md). El estado actual y lo que falta vive en [ROADMAP.md](./ROADMAP.md).
 
 ---
 
