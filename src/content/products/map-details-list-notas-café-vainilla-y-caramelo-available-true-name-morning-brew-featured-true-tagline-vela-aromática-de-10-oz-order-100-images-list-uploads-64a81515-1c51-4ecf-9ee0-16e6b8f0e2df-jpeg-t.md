@@ -1,6 +1,6 @@
 ---
 name: Morning Brew
-tagline: Para los amantes del café
+tagline: Para los amantes del café.
 description: Una mañana lenta de domingo, el silencio de la casa se entrelaza
   con el sonido de la cafetera; envuelves tus manos alrededor de tu taza
   favorita y dejas que el aroma a café recién colado te devuelva, poco a poco,
