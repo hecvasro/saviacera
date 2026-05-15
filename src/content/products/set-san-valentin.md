@@ -10,7 +10,6 @@ tags:
   - regalo
 priceDOP: 1390
 sku: SET-MD-2026
-stock: ""
 available: true
 images:
   - /uploads/img_0934.jpg

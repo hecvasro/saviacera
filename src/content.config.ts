@@ -56,13 +56,13 @@ const products = defineCollection({
       // Commerce
       priceDOP: z.number().int().positive(),
       sku: z.string().optional(),
-      stock: z.number().int().nonnegative().optional(),
       available: z.boolean().default(true),
 
-      // Media — first item is the cover. Strings (URLs) and local image refs
-      // both supported so we can swap picsum placeholders for real photos
-      // later without touching templates.
-      images: z.array(z.union([z.string().url(), image()])).min(1),
+      // Media — first item is the cover. Plain strings cover external URLs
+      // (picsum placeholders) and Decap-uploaded paths like "/uploads/foo.jpg"
+      // served from public/. image() handles relative-path imports for
+      // bundled assets. Templates render whichever shape comes in.
+      images: z.array(z.union([z.string(), image()])).min(1),
 
       // Kit-specific. Optional everywhere else so the schema stays one shape.
       includes: z.array(z.string()).default([]),

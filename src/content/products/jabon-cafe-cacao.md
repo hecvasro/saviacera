@@ -8,7 +8,6 @@ category: "jabones"
 tags: ["exfoliante", "natural"]
 priceDOP: 350
 sku: "JAB-CAF-CAC-100"
-stock: 40
 available: true
 images:
   - "https://picsum.photos/seed/jabon-cafe-cacao/800/800"

@@ -103,15 +103,6 @@ collections:
         }
       - { name: sku, label: SKU, widget: string, required: false }
       - {
-          name: stock,
-          label: Inventario,
-          widget: number,
-          value_type: int,
-          min: 0,
-          required: false,
-          hint: "Cantidad disponible. Déjalo vacío si no llevas inventario por unidad.",
-        }
-      - {
           name: available,
           label: Disponible,
           widget: boolean,

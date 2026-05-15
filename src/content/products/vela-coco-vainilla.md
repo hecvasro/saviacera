@@ -8,7 +8,6 @@ category: "velas"
 tags: ["dulce", "relajante"]
 priceDOP: 750
 sku: "VEL-COC-VAI-200"
-stock: 24
 available: true
 images:
   - "https://picsum.photos/seed/vela-coco-vainilla/800/800"
