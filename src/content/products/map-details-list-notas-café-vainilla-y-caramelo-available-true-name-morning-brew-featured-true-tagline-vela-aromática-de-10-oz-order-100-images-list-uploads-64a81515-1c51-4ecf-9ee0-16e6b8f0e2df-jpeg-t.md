@@ -12,7 +12,7 @@ tags:
   - gourmand
   - dulce
   - vainilla
-priceDOP: 1475
+priceDOP: 1500
 available: true
 images:
   - /uploads/64a81515-1c51-4ecf-9ee0-16e6b8f0e2df.jpeg
