@@ -1,7 +1,12 @@
 ---
 name: PINK CLAY + ROSEHIP
 tagline: Regeneración y luminosidad para pieles sensibles o secas.
-description: Hahaha
+description: >-
+  Jabón facial artesanal diseñado para devolver la luminosidad natural a tu piel
+  y unificar el tono, aportando una hidratación profunda.
+
+
+  Nuestra fórmula combina el poder purificante de la arcilla rosada y la acción antioxidante y despigmentante de la cúrcuma, con la regeneración celular del aceite de rosa mosqueta. 
 category: jabones
 priceDOP: 250
 available: true
