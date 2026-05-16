@@ -165,3 +165,39 @@ collections:
           required: false,
           hint: "Aparece debajo de la descripción en la página del producto. Puedes formatear con negritas, listas, etc.",
         }
+
+  # ---------------------------------------------------------------------------
+  # Sitio — imágenes principales que no pertenecen a un producto (hero de la
+  # portada, imagen del footer, galería de Personalizados / Eventos
+  # Corporativos). Singleton: un solo archivo JSON consumido por las páginas.
+  # ---------------------------------------------------------------------------
+  - name: site
+    label: Sitio
+    label_singular: Imágenes del sitio
+    editor:
+      preview: false
+    files:
+      - name: images
+        label: Imágenes principales
+        file: src/content/site/images.json
+        description: >-
+          Cambia las fotos que aparecen en la portada, el footer, y la galería
+          de Personalizados / Eventos Corporativos. Las imágenes se suben aquí
+          mismo (botón "Choose an image").
+        fields:
+          - name: homeHero
+            label: "Hero de la portada (foto principal en la página de inicio)"
+            widget: image
+          - name: footerImage
+            label: "Imagen del footer"
+            widget: image
+            required: false
+            hint: "Aparece al pie de cada página. Puede ser una foto decorativa o un mark/logo."
+          - name: personalizadosGallery
+            label: "Galería de Personalizados / Eventos Corporativos"
+            widget: list
+            summary: "{{fields.image}}"
+            field:
+              name: image
+              label: Imagen
+              widget: image

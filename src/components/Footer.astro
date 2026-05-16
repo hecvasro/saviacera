@@ -1,4 +1,6 @@
 ---
+import siteImages from "../content/site/images.json";
+
 const year = new Date().getFullYear();
 const whatsappDigits = import.meta.env.PUBLIC_WHATSAPP_NUMBER;
 ---
@@ -7,7 +9,7 @@ const whatsappDigits = import.meta.env.PUBLIC_WHATSAPP_NUMBER;
   <div class="container-page py-10 grid gap-6 md:grid-cols-3 text-sm text-muted">
     <div>
       <img
-        src="/logo-dark.png"
+        src={siteImages.footerImage}
         alt="Savia & Cera"
         class="h-8 md:h-10 w-auto block"
         decoding="async"

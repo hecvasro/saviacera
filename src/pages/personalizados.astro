@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "~/layouts/BaseLayout.astro";
+import siteImages from "../content/site/images.json";
 
 const whatsappDigits = (
   import.meta.env.PUBLIC_WHATSAPP_NUMBER || ""
@@ -18,28 +19,6 @@ const waMessage = [
 const waHref = whatsappDigits
   ? `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(waMessage)}`
   : "#";
-
-// Placeholder gallery — replace with real photos from past events (bautizos,
-// baby showers, renovación de votos, regalos corporativos) when available.
-// Put real images under public/personalizados/<filename> and reference them.
-const gallery = [
-  {
-    src: "https://picsum.photos/seed/saviacera-personalizados-1/900/900",
-    alt: "Souvenirs para bautizo",
-  },
-  {
-    src: "https://picsum.photos/seed/saviacera-personalizados-2/900/900",
-    alt: "Velas y jabones para baby shower",
-  },
-  {
-    src: "https://picsum.photos/seed/saviacera-personalizados-3/900/900",
-    alt: "Detalles personalizados para renovación de votos",
-  },
-  {
-    src: "https://picsum.photos/seed/saviacera-personalizados-4/900/900",
-    alt: "Regalos corporativos artesanales",
-  },
-];
 ---
 
 <BaseLayout
@@ -116,11 +95,11 @@ const gallery = [
     </div>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
       {
-        gallery.map((g) => (
+        siteImages.personalizadosGallery.map((img) => (
           <div class="aspect-square rounded-lg overflow-hidden bg-surface">
             <img
-              src={g.src}
-              alt={g.alt}
+              src={img}
+              alt=""
               class="h-full w-full object-cover"
               loading="lazy"
               decoding="async"

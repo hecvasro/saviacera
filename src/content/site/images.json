@@ -1,0 +1,10 @@
+{
+  "homeHero": "https://picsum.photos/seed/saviacera-hero/900/1100",
+  "footerImage": "/logo-dark.png",
+  "personalizadosGallery": [
+    "https://picsum.photos/seed/saviacera-personalizados-1/900/900",
+    "https://picsum.photos/seed/saviacera-personalizados-2/900/900",
+    "https://picsum.photos/seed/saviacera-personalizados-3/900/900",
+    "https://picsum.photos/seed/saviacera-personalizados-4/900/900"
+  ]
+}
