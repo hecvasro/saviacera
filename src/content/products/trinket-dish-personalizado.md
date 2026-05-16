@@ -7,6 +7,6 @@ priceDOP: 400
 available: true
 images:
   - /uploads/img_0387.jpeg
-featured: false
+featured: true
 order: 100
 ---
