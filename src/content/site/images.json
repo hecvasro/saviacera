@@ -2,9 +2,10 @@
   "homeHero": "https://picsum.photos/seed/saviacera-hero/900/1100",
   "footerImage": "/logo-dark.png",
   "personalizadosGallery": [
-    "https://picsum.photos/seed/saviacera-personalizados-1/900/900",
-    "https://picsum.photos/seed/saviacera-personalizados-2/900/900",
-    "https://picsum.photos/seed/saviacera-personalizados-3/900/900",
-    "https://picsum.photos/seed/saviacera-personalizados-4/900/900"
+    "/uploads/img_0740.jpeg",
+    "/uploads/img_0739.jpeg",
+    "/uploads/ff1a1193-08cc-4799-be74-e33d95f16e9e.jpeg",
+    "/uploads/3eee1c91-209b-481f-96b9-b46c5860dbfc.jpeg",
+    "/uploads/img_9542.jpeg"
   ]
 }
