@@ -15,3 +15,7 @@ images:
 featured: false
 order: 100
 ---
+> *Todos* *nuestros* *jabones* *faciales* *son*:
+
+* Hechos a mano en lotes pequeños.
+* Elaborados con ingredientes limpios, extractos botánicos e ifusionados únicamente con aceites esenciales y aceites vegetales orgánicos.
