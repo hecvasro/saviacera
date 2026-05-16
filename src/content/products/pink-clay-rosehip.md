@@ -1,5 +1,6 @@
 ---
 name: PINK CLAY + ROSEHIP
+tagline: Regeneración y luminosidad para pieles sensibles o secas.
 description: Hahaha
 category: jabones
 priceDOP: 250
