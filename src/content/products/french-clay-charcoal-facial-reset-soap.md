@@ -17,6 +17,6 @@ available: true
 images:
   - /uploads/32050467-e7b4-4946-9108-635027c0344c.jpeg
 details: []
-featured: false
+featured: true
 order: 100
 ---
