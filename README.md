@@ -34,14 +34,14 @@ Notas:
 
 Si Hector tiene Claude Code abierto en la carpeta del proyecto, puede usar estos comandos. Cada comando guía paso a paso, en español:
 
-| Comando              | Para qué                                                                 |
-| -------------------- | ------------------------------------------------------------------------ |
-| `/agregar-producto`  | Crear un producto nuevo (vela, jabón, ambientador, set, etc.). Pregunta nombre, precio, descripción, foto, etc. |
-| `/editar-producto`   | Cambiar algo de un producto existente — precio, descripción, orden, disponibilidad, etc. |
-| `/actualizar-foto`   | Reemplazar o agregar la foto de un producto.                             |
-| `/borrar-producto`   | Despublicar (quitar del sitio) o eliminar un producto.                   |
-| `/cambiar-tema`      | Cambiar colores, tipografías (fuentes), o tamaños del tema visual del sitio. |
-| `/publicar`          | Publicar al sitio cualquier cambio pendiente que tengas guardado.        |
+| Comando             | Para qué                                                                                                        |
+| ------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `/agregar-producto` | Crear un producto nuevo (vela, jabón, ambientador, set, etc.). Pregunta nombre, precio, descripción, foto, etc. |
+| `/editar-producto`  | Cambiar algo de un producto existente — precio, descripción, orden, disponibilidad, etc.                        |
+| `/actualizar-foto`  | Reemplazar o agregar la foto de un producto.                                                                    |
+| `/borrar-producto`  | Despublicar (quitar del sitio) o eliminar un producto.                                                          |
+| `/cambiar-tema`     | Cambiar colores, tipografías (fuentes), o tamaños del tema visual del sitio.                                    |
+| `/publicar`         | Publicar al sitio cualquier cambio pendiente que tengas guardado.                                               |
 
 Para usarlos:
 
@@ -76,13 +76,13 @@ Sólo Hector necesita `.envrc.local` (es para el `npm run deploy` de respaldo). 
 
 Comandos útiles:
 
-| Comando            | Para qué                                              |
-| ------------------ | ----------------------------------------------------- |
-| `npm run dev`      | Servidor local con recarga                            |
-| `npm run build`    | `astro check` + build de producción a `dist/`         |
-| `npm run preview`  | Sirve `dist/` localmente                              |
-| `npm run format`   | Formatea con Prettier                                 |
-| `npm run lint`     | Corre ESLint                                          |
+| Comando           | Para qué                                      |
+| ----------------- | --------------------------------------------- |
+| `npm run dev`     | Servidor local con recarga                    |
+| `npm run build`   | `astro check` + build de producción a `dist/` |
+| `npm run preview` | Sirve `dist/` localmente                      |
+| `npm run format`  | Formatea con Prettier                         |
+| `npm run lint`    | Corre ESLint                                  |
 
 ---
 
@@ -145,22 +145,33 @@ Comandos útiles:
    tagline: "Floral con un toque especiado"
    description: |
      Texto largo que describe el producto.
-   category: "velas"          # "velas" | "ambientadores" | "difusores" | "jabones" | "sets" | "otros"
-   tags: ["floral"]            # libres; en sets úsalos para temporada
+   category: "velas" # "velas" | "ambientadores" | "difusores" | "jabones" | "sets" | "otros"
+   tags: ["floral"] # libres; en sets úsalos para temporada
    priceDOP: 850
    sku: "VEL-ROS-CAR-200"
    available: true
+   # Variaciones (opcional): si el producto viene en varias opciones que el
+   # cliente debe escoger (aromas, tipos de cera, tamaños). Omite ambas líneas
+   # si no hay variaciones — no dejes `variants: []` ni `variantLabel: ""`.
+   variantLabel: "Aroma"
+   variants:
+     - name: "Rosas & Cardamomo"
+     - name: "Lavanda"
+     - name: "Sándalo"
+       priceDOP: 950 # opcional — si una opción cuesta distinto al precio base
    images:
      - "https://picsum.photos/seed/vela-rosas/800/800"
-   includes: []                # solo para sets: lista de cosas dentro del set
+   includes: [] # solo para sets: lista de cosas dentro del set
    details:
      - "Aroma: rosas + cardamomo"
      - "Duración: ~40h"
-   featured: true              # aparece en la home
-   order: 10                   # menor = más arriba en listados
+   featured: true # aparece en la home
+   order: 10 # menor = más arriba en listados
    createdAt: 2026-04-01
    ---
    ```
+
+   **Variaciones** — si un producto tiene varias opciones (ej. aromas distintos), define `variantLabel` con el nombre del grupo ("Aroma", "Tipo de cera", "Tamaño") y lista las opciones en `variants`. El cliente debe elegir una antes de agregar al carrito, y la opción elegida aparece en el pedido de WhatsApp y en la hoja de Google. El campo `priceDOP` por variación es **opcional**: déjalo fuera si la opción cuesta igual que el precio base; ponlo solo cuando una opción cuesta distinto (ej. un tamaño más grande).
 
 3. Si quieres usar fotos reales en lugar de placeholders, ponlas en `public/uploads/` (Decap también las pone ahí cuando subes desde el panel). En el frontmatter referéncialas con path desde la raíz: `/uploads/mi-foto.jpg`. El schema acepta tanto URLs completas (picsum y similares) como rutas `/uploads/...`.
 
@@ -171,7 +182,7 @@ Comandos útiles:
 Cada producto tiene un campo `order` en su frontmatter:
 
 ```yaml
-order: 20    # número entero. Menor = más arriba en la grilla.
+order: 20 # número entero. Menor = más arriba en la grilla.
 ```
 
 Para mover una vela arriba de otra, baja su `order`. Si tienes dos productos con `order: 10` y `order: 20`, y quieres que un nuevo producto quede en medio, ponle `order: 15`. No hay que renumerar todo.
@@ -182,14 +193,14 @@ El campo `featured: true` controla otra cosa distinta: si el producto aparece de
 
 El catálogo está organizado en **6 categorías** (valor permitido en `category:` en el frontmatter) agrupadas en **4 "paraguas"** (cada paraguas tiene su página de listado):
 
-| Categoría        | Paraguas / página              | Notas                                                                 |
-| ---------------- | ------------------------------ | --------------------------------------------------------------------- |
-| `velas`          | Aromáticos → `/aromaticos`     | Velas de soya.                                                        |
-| `ambientadores`  | Aromáticos → `/aromaticos`     | Room sprays, aceites, etc.                                            |
-| `difusores`      | Aromáticos → `/aromaticos`     | Difusores de varilla / cerámica.                                      |
-| `jabones`        | Cuidado personal → `/cuidado-personal` | Jabones artesanales. Acá entran a futuro: aceites faciales, bálsamos. |
-| `sets`           | Sets → `/sets`                 | Bundles. Usa `tags` para temporada (`san-valentin`, `dia-de-las-madres`, etc.) y `includes:` para listar qué viene dentro. |
-| `otros`          | (sin página dedicada)          | Comodín para algo nuevo que aún no encaje en un paraguas. Sale en `/productos` y nada más.        |
+| Categoría       | Paraguas / página                      | Notas                                                                                                                      |
+| --------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `velas`         | Aromáticos → `/aromaticos`             | Velas de soya.                                                                                                             |
+| `ambientadores` | Aromáticos → `/aromaticos`             | Room sprays, aceites, etc.                                                                                                 |
+| `difusores`     | Aromáticos → `/aromaticos`             | Difusores de varilla / cerámica.                                                                                           |
+| `jabones`       | Cuidado personal → `/cuidado-personal` | Jabones artesanales. Acá entran a futuro: aceites faciales, bálsamos.                                                      |
+| `sets`          | Sets → `/sets`                         | Bundles. Usa `tags` para temporada (`san-valentin`, `dia-de-las-madres`, etc.) y `includes:` para listar qué viene dentro. |
+| `otros`         | (sin página dedicada)                  | Comodín para algo nuevo que aún no encaje en un paraguas. Sale en `/productos` y nada más.                                 |
 
 Aparte está **Souvenirs y Corporativos** en `/personalizados` — pero ése no es un producto del catálogo, es una página de contacto/cotización por WhatsApp.
 

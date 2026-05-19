@@ -43,20 +43,43 @@ const products = defineCollection({
       description: z.string(),
 
       // Taxonomy
-      category: z.enum([
-        "velas",
-        "ambientadores",
-        "difusores",
-        "jabones",
-        "sets",
-        "otros",
-      ]),
+      category: z.enum(["velas", "ambientadores", "difusores", "jabones", "sets", "otros"]),
       tags: z.array(z.string()).default([]),
 
       // Commerce
       priceDOP: z.number().int().positive(),
       sku: z.string().optional(),
       available: z.boolean().default(true),
+
+      // Single-axis variations. `variantLabel` names the axis the owner is
+      // offering (e.g. "Aroma", "Tipo de cera", "Tamaño"); `variants` are the
+      // choices. One axis per product on purpose — keeps the Decap UI and the
+      // cart line key simple, and matches how a small handcrafted shop sells.
+      //
+      // Per-variant price is optional: empty → the product's base priceDOP.
+      // Decap's number widget with required:false serializes an empty input
+      // as "" (string), not an absent key — a bare z.number().optional()
+      // rejects that and silently freezes the whole build (see CLAUDE.md →
+      // "Decap-Zod schema brittleness"). z.preprocess coerces "" → undefined
+      // BEFORE the optional number check, so a blank price is valid.
+      //
+      // No availability/stock per variant — the shop tracks no inventory.
+      // Lenient by design: a variants list with no variantLabel still
+      // renders (templates fall back to a generic "Opción" label) instead
+      // of throwing and taking every other pending change down with it.
+      variantLabel: z.string().optional(),
+      variants: z
+        .array(
+          z.object({
+            name: z.string(),
+            priceDOP: z.preprocess(
+              (v) => (v === "" || v === null ? undefined : v),
+              z.number().int().positive().optional(),
+            ),
+            sku: z.string().optional(),
+          }),
+        )
+        .default([]),
 
       // Media — first item is the cover. Plain strings cover external URLs
       // (picsum placeholders) and Decap-uploaded paths like "/uploads/foo.jpg"

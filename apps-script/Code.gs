@@ -21,57 +21,58 @@
  * via `e.postData.contents` below.
  */
 
-const SHEET_NAME = 'Orders';
+const SHEET_NAME = "Orders";
 const HEADER = [
-  'Timestamp',
-  'OrderID',
-  'Items',
-  'Total',
-  'Status',
-  'CustomerPhone',
-  'CustomerName',
-  'Notes',
+  "Timestamp",
+  "OrderID",
+  "Items",
+  "Total",
+  "Status",
+  "CustomerPhone",
+  "CustomerName",
+  "Notes",
 ];
 
 function doPost(e) {
   try {
-    const payload = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    const payload = JSON.parse((e && e.postData && e.postData.contents) || "{}");
 
     const sheet = getOrCreateSheet_();
     ensureHeader_(sheet);
 
     const itemsText = (payload.items || [])
       .map(function (it) {
-        return it.qty + ' × ' + it.name + ' (RD$' + it.unitPrice + ')';
+        var label = it.variant ? it.name + " (" + it.variant + ")" : it.name;
+        return it.qty + " × " + label + " (RD$" + it.unitPrice + ")";
       })
-      .join('\n');
+      .join("\n");
 
     sheet.appendRow([
       new Date(),
-      payload.orderId || '',
+      payload.orderId || "",
       itemsText,
       payload.total || 0,
-      'pending',
-      '', // CustomerPhone — filled in manually after WhatsApp follow-up
-      '', // CustomerName
-      '', // Notes
+      "pending",
+      "", // CustomerPhone — filled in manually after WhatsApp follow-up
+      "", // CustomerName
+      "", // Notes
     ]);
 
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: true, orderId: payload.orderId }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(
+      JSON.stringify({ ok: true, orderId: payload.orderId }),
+    ).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: false, error: String(err) }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(
+      JSON.stringify({ ok: false, error: String(err) }),
+    ).setMimeType(ContentService.MimeType.JSON);
   }
 }
 
 /** Health check — open the /exec URL in a browser to verify the deploy. */
 function doGet() {
-  return ContentService
-    .createTextOutput(JSON.stringify({ ok: true, service: 'saviacera-orders' }))
-    .setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(
+    JSON.stringify({ ok: true, service: "saviacera-orders" }),
+  ).setMimeType(ContentService.MimeType.JSON);
 }
 
 function getOrCreateSheet_() {

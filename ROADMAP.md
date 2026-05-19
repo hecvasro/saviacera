@@ -2,7 +2,7 @@
 
 Status snapshot, what's done, what's pending, and what needs a decision before it can proceed. The wife-facing how-to lives in [README.md](./README.md) (Spanish). The technical/operating reference lives in [CLAUDE.md](./CLAUDE.md). This file is the **handoff doc** — kept terse and actionable so a future Claude session (or you, returning a week later) can pick up cold.
 
-Last updated: 2026-05-15.
+Last updated: 2026-05-19.
 
 ## Status snapshot
 
@@ -11,8 +11,9 @@ Last updated: 2026-05-15.
 - **Hosting**: Cloudflare Workers Static Assets, Worker name `saviacera`, configured by `wrangler.jsonc`. Migrated off Cloudflare Pages on 2026-05-12.
 - **CI/Deploy**: GitHub → Cloudflare Workers Builds auto-deploy is **live**. Every push to `main` triggers a Cloudflare-side build + `wrangler deploy`. `npm run deploy` remains as a manual fallback.
 - **Order flow**: **live**. `src/lib/checkout.ts` reads `PUBLIC_ORDER_ENDPOINT` and `PUBLIC_WHATSAPP_NUMBER` from `import.meta.env`. The Apps Script `/exec` endpoint is deployed and smoke-tested (`SAV-TEST-0001` appended to the Google Sheet). `Footer.astro` reads the env-driven WhatsApp number.
-- **Decap CMS**: **live, end-to-end validated by the owner**. Admin at `https://saviacera.com/innh85dhz2/` (obscured path). Auth model is a **GitHub App bot proxy** in the Worker — the wife does **not** need a GitHub account and is **not** a repo collaborator. All writes flow through the Worker as the App bot, with the editor's Cloudflare Access email annotated into each commit message. Edit + create both confirmed working through the live site after the schema-brittleness fix on 2026-05-15 (see Done → "Schema brittleness fix").
-- **Content**: 3 sample products in `src/content/products/` — `jabon-cafe-cacao`, `set-san-valentin`, `vela-coco-vainilla` (placeholder photos pending real shoot).
+- **Decap CMS**: **live and in real use**. Admin at `https://saviacera.com/innh85dhz2/` (obscured path). Auth model is a **GitHub App bot proxy** in the Worker — the wife does **not** need a GitHub account and is **not** a repo collaborator. All writes flow through the Worker as the App bot, with the editor's Cloudflare Access email annotated into each commit message. Edit + create both validated end-to-end after the schema-brittleness fix on 2026-05-15. On 2026-05-16 the original 3 sample products were deleted and the real catalog began (see "Content" below).
+- **Content**: real catalog in flight. As of 2026-05-19, `src/content/products/` holds 8 real products (`calendula-chamomile`, `french-clay-charcoal-facial-reset-soap`, `pink-clay-rosehip`, `trinket-dish-personalizado`, `drift-bloom-edición-mamá`, `morning-brew`, `set-esencia-de-mama`, `set-san-valentin`) with real photos uploaded via Decap, plus one leftover garbage-named file from the pre-fix schema-brittleness era still pending cleanup (see Pending → "Data-integrity cleanup").
+- **Product variations**: **live** as of 2026-05-19. Single-axis variations (`variantLabel` + `variants[]` in `src/content.config.ts` and `public/innh85dhz2/config.yml`) — the wife names the axis (Aroma, Tipo de cera, Tamaño) and lists options. Per-option price is optional (`z.preprocess` coerces blank → undefined to dodge the Decap brittleness class). PDP forces explicit selection; chosen option appears in cart, WhatsApp message, and Apps Script sheet row.
 - **Content-management strategy**: two interfaces sharing the same markdown files.
   - **Decap CMS** at `saviacera.com/innh85dhz2/` — primary path for the non-technical owner.
   - **Claude Code skills** in `.claude/skills/` — Hector's tool and fallback (`/agregar-producto`, `/editar-producto`, `/borrar-producto`, `/actualizar-foto`, `/cambiar-tema`, `/publicar`).
@@ -38,10 +39,13 @@ Last updated: 2026-05-15.
   - "Login with GitHub" button auto-clicked on admin entry so the wife never sees it.
 - [x] **4-umbrella catalog taxonomy** live: Aromáticos / Cuidado personal / Sets / Personalizados. Old `velas` / `jabones` / `kits` pages replaced; Header, Footer, and home intro updated to match.
 - [x] **Schema brittleness fix** (commit `783a4c4`, 2026-05-15). The first wave of Decap edits committed to `main` but never reached production because `astro check && astro build` was failing every build. Two unrelated Zod constraints didn't match what Decap actually serializes: (a) `stock: z.number().optional()` rejected the empty-input `stock: ""` (string) that Decap writes when a non-required number widget is left blank, and (b) `images: z.union([z.string().url(), image()])` rejected Decap's root-relative `/uploads/foo.jpg` paths (not full URL, not relative import). Removed `stock` entirely (no inventory tracking) and loosened the image union to `z.string()`. See Operating notes → "Decap-Zod schema brittleness".
+- [x] **Site images collection in Decap** (commit `0bdbfce`, 2026-05-16). Files-collection in `public/innh85dhz2/config.yml` writing to `src/content/site/images.json`. The wife can now change the home hero, footer image, and Personalizados gallery from the admin panel — no skill or code touch required. `Footer.astro` and the relevant pages import the JSON directly.
+- [x] **Product variations** (2026-05-19). Schema (`src/content.config.ts`) and Decap config got a single-axis `variantLabel` + `variants[]` (each option has `name`, optional `priceDOP`, optional `sku`). Cart keys lines by `slug::variant` so two scents stay as two cart lines. PDP renders a `<select>` that forces explicit choice and updates the displayed price on change. WhatsApp message + Apps Script payload include the chosen option. `Code.gs` updated to add the variant in parentheses on the sheet — **manual Apps Script redeploy required** to pick up the sheet-side change; the WhatsApp message side works without redeploy. `agregar-producto` and `editar-producto` skills updated in the same pass and a stale `kits`/`stock` reference from before the taxonomy and brittleness fixes was scrubbed at the same time.
+- [x] **Instagram in footer** (2026-05-19). `Footer.astro` Contacto column links to `https://instagram.com/sabiasera` as `@sabiasera`.
 
 ## In-flight
 
-- **Owner ramp-up on Decap CMS** — edit and create flows both confirmed end-to-end after the 2026-05-15 schema fix. Remaining: wife expanding the real catalog (see Pending → "Real product photography + catalog content") and getting comfortable with the editor without coaching.
+- **Real catalog build-out** — wife is past the smoke-test phase. As of 2026-05-19 there are 8 real products with real photos managed via Decap. She has full control over the editor without coaching for the basic edit/create flows. Remaining content work and any new variations setups are her ongoing work, not a blocker.
 
 ## Pending
 
@@ -65,11 +69,24 @@ Right now `cambiar-tema` is the only way to touch `src/styles/tokens.css` and `B
 
 Not blocking; do after the wife is comfortable editing products.
 
-### Real product photography + catalog content
+### Data-integrity cleanup — `morning-brew.md` swap
 
-The three sample products use placeholder images. Replace once real photos exist (Decap handles uploads through `/api/github/*` → `public/uploads/`). Wife should also flesh out the actual catalog beyond samples.
+A leftover artifact from the pre-2026-05-15 schema-brittleness era: there are two product files with crossed identities.
 
-## Short-term backlog (after wife signs off on Decap testing)
+- `src/content/products/map-details-list-notas-café-vainilla-y-caramelo-...-morning-brew-...md` — garbage filename (from before `identifier_field: name` was set on the products collection), but its `name:` frontmatter is **"Morning Brew"**.
+- `src/content/products/morning-brew.md` — clean filename, but its `name:` frontmatter is **"Drift & Bloom"**.
+
+So the URL `/productos/morning-brew` serves a product called "Drift & Bloom", and "Morning Brew" lives at a long mangled URL. Both build fine — the schema doesn't notice — but it's confusing in the catalog and unreviewable in `git log`. Resolution needs an owner decision (which file is canonical, do we keep both, are there duplicate photos, etc.) and then a manual `git mv` + frontmatter cleanup. Decap won't rename files, so this has to be done by hand. Not blocking, but worth resolving before more orders come in attached to ambiguous slugs.
+
+### Apps Script redeploy to surface variant column in the sheet
+
+`apps-script/Code.gs` was updated 2026-05-19 to append the chosen variant in parentheses on each item row (`2 × Vela X (Lavanda) (RD$1500)`). The file is committed but the **live Web App is a separately-deployed artifact** — Apps Script "Deploy → Manage deployments" needs a "New version" deployment of the existing Web App to pick up the change. The WhatsApp message displays the variant regardless (the site does that on its own), so this is sheet-side polish, not a blocker.
+
+### Real product photography — partly done
+
+Originally tracked as fully pending. As of 2026-05-19 the wife has uploaded real photos for the 8 real products via Decap. Whatever placeholder content remains (or future products without a final shoot) follows the same `/uploads/` upload-via-Decap path; no further infrastructure work needed.
+
+## Short-term backlog
 
 - [ ] **Build-failure alerting.** The 2026-05-15 incident hid a broken pipeline for ~9h because nobody was watching. Decap reports "Published" the moment the commit lands; whether Cloudflare's subsequent build actually deployed is invisible to her. Options, cheapest first: (a) Cloudflare Workers Builds email-on-failure (dashboard toggle, free); (b) a tiny GitHub Actions job on `push: main` that pings a webhook if `astro build` fails; (c) a status pill on the Decap admin page that polls the latest CF deploy time and warns if it's lagging behind `main`'s tip. Pick one.
 - [ ] **Sitemap + robots.txt**. Astro has `@astrojs/sitemap` integration — one-liner setup. (Currently the `/innh85dhz2/` page has its own `noindex` meta — site-wide sitemap should explicitly exclude that path.)

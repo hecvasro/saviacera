@@ -3,6 +3,7 @@ import { getCollection, render } from "astro:content";
 import BaseLayout from "~/layouts/BaseLayout.astro";
 import PriceTag from "~/components/PriceTag.astro";
 import { imageSrc, PLACEHOLDER_IMAGE } from "~/lib/images";
+import { formatDOP } from "~/lib/format";
 
 export async function getStaticPaths() {
   const products = await getCollection("products");
@@ -16,6 +17,19 @@ const { product } = Astro.props;
 const { Content } = await render(product);
 const images = product.data.images.map((img) => imageSrc(img));
 const cover = images[0] ?? PLACEHOLDER_IMAGE;
+
+// Single-axis variations. `variantLabel` may be blank even when variants
+// exist (schema is lenient on purpose — see content.config.ts); fall back to
+// a generic axis name so the UI never renders an empty <label>. Each option's
+// price is its own priceDOP or the product base when left empty.
+const basePrice = product.data.priceDOP;
+const axisLabel = product.data.variantLabel?.trim() || "Opción";
+const variants = product.data.variants.map((v) => ({
+  name: v.name,
+  price: v.priceDOP ?? basePrice,
+}));
+const hasVariants = variants.length > 0;
+const priceVaries = variants.some((v) => v.price !== basePrice);
 const categoryLabel: Record<string, string> = {
   velas: "Vela",
   ambientadores: "Ambientador",
@@ -61,14 +75,17 @@ const categoryLabel: Record<string, string> = {
     <div>
       <p class="chip">{categoryLabel[product.data.category] || product.data.category}</p>
       <h1 class="mt-3 font-display text-4xl">{product.data.name}</h1>
-      {
-        product.data.tagline && (
-          <p class="mt-1 text-muted">{product.data.tagline}</p>
-        )
-      }
+      {product.data.tagline && <p class="mt-1 text-muted">{product.data.tagline}</p>}
 
-      <div class="mt-5">
-        <PriceTag amount={product.data.priceDOP} size="lg" />
+      <div class="mt-5 flex items-baseline gap-2">
+        <span data-price-prefix class:list={["text-sm text-muted", { hidden: !priceVaries }]}>
+          Desde
+        </span>
+        <PriceTag
+          amount={priceVaries ? Math.min(basePrice, ...variants.map((v) => v.price)) : basePrice}
+          size="lg"
+          class="pdp-price-value"
+        />
       </div>
 
       <p class="mt-5 text-foreground/90 whitespace-pre-line">
@@ -104,6 +121,29 @@ const categoryLabel: Record<string, string> = {
         )
       }
 
+      {
+        hasVariants && (
+          <div class="mt-6">
+            <label for="variant-select" class="block text-sm uppercase tracking-wide text-muted">
+              {axisLabel}
+            </label>
+            <select
+              id="variant-select"
+              class="mt-2 w-full max-w-xs rounded-md border border-border bg-surface px-3 py-2"
+            >
+              <option value="" data-price={basePrice} selected disabled>
+                Elige una opción…
+              </option>
+              {variants.map((v) => (
+                <option value={v.name} data-price={v.price}>
+                  {v.price !== basePrice ? `${v.name} — ${formatDOP(v.price)}` : v.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )
+      }
+
       <div class="mt-8 flex flex-wrap gap-3">
         <button
           type="button"
@@ -111,13 +151,26 @@ const categoryLabel: Record<string, string> = {
           data-add-to-cart
           data-slug={product.id}
           data-name={product.data.name}
-          data-price={product.data.priceDOP}
+          data-price={basePrice}
           data-image={cover}
         >
           Agregar al carrito
         </button>
         <a href="/carrito" class="btn btn-secondary">Ir al carrito</a>
       </div>
+
+      {
+        hasVariants && (
+          <p
+            data-variant-required
+            class="mt-3 hidden text-sm text-danger"
+            role="status"
+            aria-live="polite"
+          >
+            Por favor elige una opción antes de agregar al carrito.
+          </p>
+        )
+      }
 
       <p
         data-add-confirmation
@@ -137,6 +190,7 @@ const categoryLabel: Record<string, string> = {
 
 <script>
   import { addToCart } from "~/lib/cart";
+  import { formatDOP } from "~/lib/format";
 
   // Idempotent: View Transitions fires astro:page-load on every navigation
   // (including initial load), and inline scripts also run at parse time.
@@ -153,17 +207,60 @@ const categoryLabel: Record<string, string> = {
       });
     });
 
+    // Variant <select>: keep the displayed price in sync with the chosen
+    // option and clear the "elige una opción" warning once a real choice is
+    // made. Bound guard for the View-Transitions re-run.
+    // Plain querySelector + cast: querySelector<HTMLSelectElement> would
+    // collide with the workers-types Element.remove(): Element redeclaration
+    // that leaks globally via the worker/index.ts triple-slash reference.
+    // HTMLSelectElement's own remove(index): void no longer satisfies the
+    // corrupted constraint, so we side-step the generic check entirely.
+    const variantSel = document.querySelector("#variant-select") as HTMLSelectElement | null;
+    if (variantSel && variantSel.dataset.bound !== "1") {
+      variantSel.dataset.bound = "1";
+      variantSel.addEventListener("change", () => {
+        const opt = variantSel.selectedOptions[0];
+        const price = Number(opt?.dataset.price || 0);
+        const priceEl = document.querySelector<HTMLElement>(".pdp-price-value");
+        if (priceEl && price) priceEl.textContent = formatDOP(price);
+        // Once a real option is picked, drop the "Desde" prefix — the price
+        // shown is now exact, not a floor.
+        if (variantSel.value) {
+          document.querySelector<HTMLElement>("[data-price-prefix]")?.classList.add("hidden");
+          document.querySelector<HTMLElement>("[data-variant-required]")?.classList.add("hidden");
+        }
+      });
+    }
+
     const addBtn = document.querySelector<HTMLButtonElement>("[data-add-to-cart]");
     if (addBtn && addBtn.dataset.bound !== "1") {
       addBtn.dataset.bound = "1";
       addBtn.addEventListener("click", () => {
         const slug = addBtn.dataset.slug || "";
         const name = addBtn.dataset.name || "";
-        const unitPrice = Number(addBtn.dataset.price || 0);
+        let unitPrice = Number(addBtn.dataset.price || 0);
         const image = addBtn.dataset.image || undefined;
+
+        // When the product has variations, a choice is mandatory. The select's
+        // placeholder option has an empty value, so an empty value means the
+        // customer never picked — surface the warning and bail.
+        const sel = document.querySelector("#variant-select") as HTMLSelectElement | null;
+        let variant: string | undefined;
+        if (sel) {
+          if (!sel.value) {
+            document
+              .querySelector<HTMLElement>("[data-variant-required]")
+              ?.classList.remove("hidden");
+            return;
+          }
+          variant = sel.value;
+          const optPrice = Number(sel.selectedOptions[0]?.dataset.price || 0);
+          if (optPrice) unitPrice = optPrice;
+        }
+
         if (!slug || !name || !unitPrice) return;
 
-        addToCart({ slug, name, unitPrice, image });
+        addToCart({ slug, name, unitPrice, image, variant });
         const note = document.querySelector<HTMLElement>("[data-add-confirmation]");
         if (note) {
           note.classList.remove("hidden");

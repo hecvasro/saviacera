@@ -6,19 +6,14 @@
  * the WhatsApp message itself contains everything we need.
  */
 
-import {
-  clearCart,
-  getCart,
-  getOrderId,
-  getSubtotal,
-  setOrderMeta,
-  type CartItem,
-} from "./cart";
+import { clearCart, getCart, getOrderId, getSubtotal, setOrderMeta, type CartItem } from "./cart";
 import { formatDOP } from "./format";
 
 interface OrderLine {
   slug: string;
   name: string;
+  /** Chosen variation, e.g. "Lavanda". Omitted for products without variations. */
+  variant?: string;
   qty: number;
   unitPrice: number;
   lineTotal: number;
@@ -37,9 +32,7 @@ const WHATSAPP_NUMBER = import.meta.env.PUBLIC_WHATSAPP_NUMBER;
 /** Pings the Apps Script endpoint. Resolves regardless of outcome. */
 async function postOrder(payload: OrderPayload): Promise<void> {
   if (!ORDER_ENDPOINT || ORDER_ENDPOINT.includes("REPLACE_ME")) {
-    console.warn(
-      "[saviacera] PUBLIC_ORDER_ENDPOINT is not configured. Skipping order POST.",
-    );
+    console.warn("[saviacera] PUBLIC_ORDER_ENDPOINT is not configured. Skipping order POST.");
     return;
   }
   try {
@@ -66,7 +59,8 @@ function buildWhatsappMessage(payload: OrderPayload): string {
   lines.push(`*Pedido:* ${payload.orderId}`);
   lines.push("*Artículos:*");
   for (const it of payload.items) {
-    lines.push(`• ${it.qty} × ${it.name} — ${formatDOP(it.lineTotal)}`);
+    const label = it.variant ? `${it.name} (${it.variant})` : it.name;
+    lines.push(`• ${it.qty} × ${label} — ${formatDOP(it.lineTotal)}`);
   }
   lines.push("");
   lines.push(`*Total:* ${formatDOP(payload.total)}`);
@@ -87,6 +81,7 @@ export async function confirmCheckout(): Promise<void> {
   const items: OrderLine[] = cart.map((i) => ({
     slug: i.slug,
     name: i.name,
+    ...(i.variant ? { variant: i.variant } : {}),
     qty: i.qty,
     unitPrice: i.unitPrice,
     lineTotal: i.unitPrice * i.qty,
@@ -109,9 +104,7 @@ export async function confirmCheckout(): Promise<void> {
   // Build wa.me URL.
   const number = (WHATSAPP_NUMBER || "").replace(/\D/g, "");
   if (!number) {
-    alert(
-      "El número de WhatsApp no está configurado. Por favor avísanos por otra vía.",
-    );
+    alert("El número de WhatsApp no está configurado. Por favor avísanos por otra vía.");
     return;
   }
   const message = buildWhatsappMessage(payload);

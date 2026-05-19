@@ -10,12 +10,13 @@ Astro 5 + Tailwind v4 static site. Spanish (DR) primary, English wired up for la
 - [DECAP-SETUP.md](./DECAP-SETUP.md) — one-time Decap manual setup (GitHub App + Worker secrets + Cloudflare Access), in Spanish. Reference if any of those pieces need to be re-created or rotated.
 - This file (CLAUDE.md) — technical/operating reference for Claude sessions: stack, deploy plumbing, credentials, conventions.
 
-**Current state (2026-05-14)**:
+**Current state (2026-05-19)**:
 
 - Site live at `https://saviacera.com` (apex canonical) and `https://www.saviacera.com`.
 - Order flow live: cart → Apps Script `/exec` → Google Sheet row + WhatsApp deep link, all driven by build-time env vars in the Cloudflare dashboard.
-- Decap CMS live and in testing at `https://saviacera.com/innh85dhz2/`. Wife is running smoke tests.
+- Decap CMS live, wife actively editing the real catalog (no longer the sample placeholders). Admin at `https://saviacera.com/innh85dhz2/`.
 - GitHub → Workers Builds auto-deploy is live: push to `main` is the deploy.
+- **Products support single-axis variations** (`variantLabel` + `variants[]` in the schema and Decap config). The wife defines the axis name ("Aroma", "Tipo de cera", "Tamaño") and the options; per-option price override is optional (omit for same-as-base). Customer must pick an option before adding to cart, and the chosen option appears in the WhatsApp message and in the Apps Script sheet row (`apps-script/Code.gs` updated — the live Web App needs a manual redeploy to pick up the sheet-side change; WhatsApp message works independently of that).
 
 **Content-management strategy** — two interfaces, same markdown files:
 
@@ -60,8 +61,8 @@ The deploy target is **Workers Static Assets**, not Cloudflare Pages. The site i
   "compatibility_date": "2026-05-12",
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "404-page"
-  }
+    "not_found_handling": "404-page",
+  },
 }
 ```
 
@@ -92,7 +93,7 @@ Done from the modern unified **Workers & Pages → saviacera → Settings → Bu
    - `PUBLIC_ORDER_ENDPOINT` = the deployed Apps Script `/exec` URL
    - `PUBLIC_WHATSAPP_NUMBER` = `18295286271` (or whatever the canonical number is)
    - `NODE_VERSION` = `20`
-   These must be **build-time vars** (visible to `astro build`), not Worker runtime secrets, because `PUBLIC_*` is baked in at build time.
+     These must be **build-time vars** (visible to `astro build`), not Worker runtime secrets, because `PUBLIC_*` is baked in at build time.
 5. Save. The first auto-deploy fires on the next push to `main`.
 
 ### How credentials flow
@@ -188,14 +189,14 @@ direnv exec . npm run deploy
 
 Six project-local skills in `.claude/skills/` drive guided Spanish Q&A flows for catalog tasks. Each skill is a directory with a `SKILL.md`. They become invocable as slash commands (`/agregar-producto`, etc.) the moment a fresh Claude Code session opens this repo.
 
-| Slash command         | What it does                                                                 |
-| --------------------- | ---------------------------------------------------------------------------- |
-| `/agregar-producto`   | Guided creation of a new product `.md` file. Asks name, category, price, etc. in Spanish, validates each input, shows a preview, writes the file, and commits + pushes. |
-| `/editar-producto`    | Locate an existing product, ask what to change, apply via `Edit`, commit + push. |
-| `/borrar-producto`    | Offers two paths: despublish (`available: false`) or hard delete (`git rm`). Defaults to despublish. |
-| `/actualizar-foto`    | Replace, add, remove, or reorder the `images:` array on a product.            |
-| `/cambiar-tema`       | Walk through a `src/styles/tokens.css` change (color, font, radius, spacing, shadow). Adds Google Fonts `<link>` to `BaseLayout.astro` when font changes. Documents logo-font wiring path for future. |
-| `/publicar`           | Inspect pending changes, commit, push. Fallback when a skill above left changes unpublished. |
+| Slash command       | What it does                                                                                                                                                                                          |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/agregar-producto` | Guided creation of a new product `.md` file. Asks name, category, price, etc. in Spanish, validates each input, shows a preview, writes the file, and commits + pushes.                               |
+| `/editar-producto`  | Locate an existing product, ask what to change, apply via `Edit`, commit + push.                                                                                                                      |
+| `/borrar-producto`  | Offers two paths: despublish (`available: false`) or hard delete (`git rm`). Defaults to despublish.                                                                                                  |
+| `/actualizar-foto`  | Replace, add, remove, or reorder the `images:` array on a product.                                                                                                                                    |
+| `/cambiar-tema`     | Walk through a `src/styles/tokens.css` change (color, font, radius, spacing, shadow). Adds Google Fonts `<link>` to `BaseLayout.astro` when font changes. Documents logo-font wiring path for future. |
+| `/publicar`         | Inspect pending changes, commit, push. Fallback when a skill above left changes unpublished.                                                                                                          |
 
 Each skill ends by pushing to `main`. GitHub auto-deploy is configured, so the push **is** the deploy — no extra `npm run deploy` step needed after a skill-driven change.
 
@@ -263,17 +264,17 @@ worker/index.ts                # The auth + GitHub proxy
 
 ### Schema brittleness — what Decap actually writes
 
-**The failure mode (read this first).** Every Decap publish is a commit to `main`; one shared Cloudflare Workers Build runs `astro check && astro build` for the whole site. Any single product file that violates the Zod schema fails that build, the deploy is skipped, and **nothing reaches production** — not just the bad product, *every* pending change. From the editor's side the publish looked fine (Decap reported success, the commit landed); the site silently stayed on the previous build. The non-technical owner gets zero error feedback. This class of bug has frozen the live site twice:
+**The failure mode (read this first).** Every Decap publish is a commit to `main`; one shared Cloudflare Workers Build runs `astro check && astro build` for the whole site. Any single product file that violates the Zod schema fails that build, the deploy is skipped, and **nothing reaches production** — not just the bad product, _every_ pending change. From the editor's side the publish looked fine (Decap reported success, the commit landed); the site silently stayed on the previous build. The non-technical owner gets zero error feedback. This class of bug has frozen the live site twice:
 
 - `9cd3a6d` / `1da4203` → fixed by `783a4c4` (2026-05-15): empty `stock` serialized as `""` vs `z.number()`; `/uploads/x.jpg` vs `z.string().url()`.
 - `65d2937` / `ad1c8c5` / `5cb3204` → fixed by `0c7a2aa` (2026-05-15): a product created with no photo vs `images.min(1)`; plus garbage `map-...` filenames because `identifier_field` was unset.
 
-**Preventive vs. cleanup — know the difference.** When you fix one of these, separate the change that *stops recurrence* from the one-time cleanup of already-broken files. Renaming a mangled file fixes one file; it does not prevent the next one. The preventive changes are the schema/config hardening below. And note the honest limit: hardening shrinks the surface, it doesn't close the class. The real systemic safety net is **build-failure alerting** (ROADMAP short-term backlog) so a broken pipeline is noticed instead of discovered by accident.
+**Preventive vs. cleanup — know the difference.** When you fix one of these, separate the change that _stops recurrence_ from the one-time cleanup of already-broken files. Renaming a mangled file fixes one file; it does not prevent the next one. The preventive changes are the schema/config hardening below. And note the honest limit: hardening shrinks the surface, it doesn't close the class. The real systemic safety net is **build-failure alerting** (ROADMAP short-term backlog) so a broken pipeline is noticed instead of discovered by accident.
 
 **Rules of thumb when adding or changing a field:**
 
 - **`identifier_field` is mandatory here.** Decap defaults to a `title` field for entry identity and `{{slug}}`. Our schema has no `title` (it uses `name`). Without `identifier_field: name` on the collection, `{{slug}}` collapses to a serialization of the whole entry and every new product gets a filename like `map-available-true-...-pricedop-250.md`. Keep `identifier_field: name` in `config.yml`. Decap does not rename files on edit, so already-created files keep whatever slug they were born with — cleanup means a manual `git mv`.
-- **Optional numeric / datetime**: don't trust `.optional()` alone — Decap writes `""` for an empty `widget: number, required: false`, not an absent key. Either make it `required: true` in `config.yml`, or wrap the Zod side in `z.preprocess((v) => v === "" ? undefined : v, z.number().optional())`. Best of all: if the field isn't actually used (like `stock` was), delete it from both files.
+- **Optional numeric / datetime**: don't trust `.optional()` alone — Decap writes `""` for an empty `widget: number, required: false`, not an absent key. Either make it `required: true` in `config.yml`, or wrap the Zod side in `z.preprocess((v) => v === "" ? undefined : v, z.number().optional())`. Best of all: if the field isn't actually used (like `stock` was), delete it from both files. The `variants[].priceDOP` field in `src/content.config.ts` is the canonical worked example of the `z.preprocess` pattern — the per-option price is intentionally optional ("Lavanda" costs the same as the product base; "Sándalo" might cost more), so a blank Decap input must coerce to `undefined` instead of choking on `""`.
 - **Image paths**: use `z.union([z.string(), image()])`, not `z.string().url()`. Decap's `media_folder: public/uploads` + `public_folder: /uploads` means it writes root-relative `/uploads/foo.jpg`, which is neither a full URL nor a relative import. Templates fork on `typeof img === "string"`.
 - **Arrays the editor can leave empty** (like `images`): Decap's `list` widget can't enforce a minimum, so `.min(1)` just turns a forgotten photo into a site-wide freeze. Default to `.default([])` and render a fallback (`/placeholder.svg` via `src/lib/images.ts` → `imageSrc()`), not a hard floor.
 
@@ -284,19 +285,24 @@ When in doubt, `npm run build` locally after editing the schema or `config.yml`.
 The next polish step is a `theme` files-collection so the wife can change fonts, colors, and logo through the same panel rather than via the `cambiar-tema` skill. Sketch:
 
 ```yaml
-  - name: theme
-    label: Tema visual
-    files:
-      - name: site
-        label: Configuración del tema
-        file: src/content/theme/site.json
-        fields:
-          - { name: fontDisplay, label: "Fuente de títulos",     widget: string, default: "Cormorant Garamond" }
-          - { name: fontBody,    label: "Fuente del texto",      widget: string, default: "Inter" }
-          - { name: fontLogo,    label: "Fuente del logo",       widget: string, required: false }
-          - { name: colorAccent, label: "Color de acento",       widget: color }
-          - { name: colorBackground, label: "Color de fondo",    widget: color }
-          - { name: logoImage,   label: "Imagen del logo (opcional)", widget: image, required: false }
+- name: theme
+  label: Tema visual
+  files:
+    - name: site
+      label: Configuración del tema
+      file: src/content/theme/site.json
+      fields:
+        - {
+            name: fontDisplay,
+            label: "Fuente de títulos",
+            widget: string,
+            default: "Cormorant Garamond",
+          }
+        - { name: fontBody, label: "Fuente del texto", widget: string, default: "Inter" }
+        - { name: fontLogo, label: "Fuente del logo", widget: string, required: false }
+        - { name: colorAccent, label: "Color de acento", widget: color }
+        - { name: colorBackground, label: "Color de fondo", widget: color }
+        - { name: logoImage, label: "Imagen del logo (opcional)", widget: image, required: false }
 ```
 
 Wiring: a small Astro integration or pre-build script reads `src/content/theme/site.json` and writes `:root { --color-accent: …; --font-display: …; }` plus a Google Fonts `<link>` URL into `BaseLayout.astro`. If `logoImage` is set, `Header.astro` conditionally renders `<img>`; else falls back to wordmark text. Not blocking — pick up after wife signs off on the products workflow.

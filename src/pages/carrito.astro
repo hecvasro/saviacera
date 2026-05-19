@@ -46,7 +46,7 @@ import BaseLayout from "~/layouts/BaseLayout.astro";
 </BaseLayout>
 
 <script>
-  import { getCart, getSubtotal, removeFromCart, setQty, clearCart } from "~/lib/cart";
+  import { getCart, getSubtotal, removeFromCart, setQty, clearCart, lineKey } from "~/lib/cart";
   import { formatDOP } from "~/lib/format";
   import { confirmCheckout } from "~/lib/checkout";
 
@@ -81,24 +81,29 @@ import BaseLayout from "~/layouts/BaseLayout.astro";
     linesEl.innerHTML = cart
       .map((item) => {
         const lineTotal = item.unitPrice * item.qty;
+        const key = escapeHtml(lineKey(item));
         const img = item.image
           ? `<img src="${escapeHtml(item.image)}" alt="" class="h-20 w-20 rounded-md object-cover bg-surface" />`
           : `<div class="h-20 w-20 rounded-md bg-surface"></div>`;
+        const variantLine = item.variant
+          ? `<div class="text-sm text-foreground/80">${escapeHtml(item.variant)}</div>`
+          : "";
         return `
           <li class="py-4 flex gap-4 items-center">
             ${img}
             <div class="flex-1">
               <a href="/productos/${escapeHtml(item.slug)}" class="font-medium hover:text-accent">${escapeHtml(item.name)}</a>
+              ${variantLine}
               <div class="text-sm text-muted">${formatDOP(item.unitPrice)} c/u</div>
               <div class="mt-2 inline-flex items-center gap-2 rounded-md border border-border">
-                <button type="button" class="px-3 py-1 hover:bg-surface" data-dec data-slug="${escapeHtml(item.slug)}" aria-label="Restar">−</button>
+                <button type="button" class="px-3 py-1 hover:bg-surface" data-dec data-key="${key}" aria-label="Restar">−</button>
                 <span class="px-2 min-w-[2ch] text-center">${item.qty}</span>
-                <button type="button" class="px-3 py-1 hover:bg-surface" data-inc data-slug="${escapeHtml(item.slug)}" aria-label="Sumar">+</button>
+                <button type="button" class="px-3 py-1 hover:bg-surface" data-inc data-key="${key}" aria-label="Sumar">+</button>
               </div>
             </div>
             <div class="text-right">
               <div class="font-medium">${formatDOP(lineTotal)}</div>
-              <button type="button" class="mt-1 text-xs text-muted hover:text-danger underline" data-remove data-slug="${escapeHtml(item.slug)}">Quitar</button>
+              <button type="button" class="mt-1 text-xs text-muted hover:text-danger underline" data-remove data-key="${key}">Quitar</button>
             </div>
           </li>
         `;
@@ -124,26 +129,26 @@ import BaseLayout from "~/layouts/BaseLayout.astro";
 
       const inc = t.closest<HTMLButtonElement>("[data-inc]");
       if (inc) {
-        const slug = inc.dataset.slug || "";
+        const key = inc.dataset.key || "";
         const cart = getCart();
-        const item = cart.find((i) => i.slug === slug);
-        if (item) setQty(slug, item.qty + 1);
+        const item = cart.find((i) => lineKey(i) === key);
+        if (item) setQty(key, item.qty + 1);
         return;
       }
 
       const dec = t.closest<HTMLButtonElement>("[data-dec]");
       if (dec) {
-        const slug = dec.dataset.slug || "";
+        const key = dec.dataset.key || "";
         const cart = getCart();
-        const item = cart.find((i) => i.slug === slug);
-        if (item) setQty(slug, item.qty - 1);
+        const item = cart.find((i) => lineKey(i) === key);
+        if (item) setQty(key, item.qty - 1);
         return;
       }
 
       const rem = t.closest<HTMLButtonElement>("[data-remove]");
       if (rem) {
-        const slug = rem.dataset.slug || "";
-        if (slug) removeFromCart(slug);
+        const key = rem.dataset.key || "";
+        if (key) removeFromCart(key);
         return;
       }
 

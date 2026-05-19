@@ -19,6 +19,20 @@ export interface CartItem {
   unitPrice: number;
   qty: number;
   image?: string;
+  /** Chosen variation value, e.g. "Lavanda". Absent when the product has no
+   *  variations. Two cart lines for the same product but different variants
+   *  are distinct lines (different price, different WhatsApp line). */
+  variant?: string;
+}
+
+/**
+ * Identity of a cart line. A product without variations is keyed by `slug`;
+ * a product with a chosen variation is keyed by `slug::variant` so the same
+ * product in two scents stays as two independent lines. Everything that
+ * mutates a specific line (qty, remove) addresses it by this key.
+ */
+export function lineKey(item: Pick<CartItem, "slug" | "variant">): string {
+  return item.variant ? `${item.slug}::${item.variant}` : item.slug;
 }
 
 export interface OrderMeta {
@@ -77,7 +91,8 @@ export function getSubtotal(): number {
 
 export function addToCart(item: Omit<CartItem, "qty">, qty = 1): void {
   const cart = getCart();
-  const existing = cart.find((i) => i.slug === item.slug);
+  const key = lineKey(item);
+  const existing = cart.find((i) => lineKey(i) === key);
   if (existing) {
     existing.qty += qty;
   } else {
@@ -87,16 +102,16 @@ export function addToCart(item: Omit<CartItem, "qty">, qty = 1): void {
   emit();
 }
 
-export function removeFromCart(slug: string): void {
-  const cart = getCart().filter((i) => i.slug !== slug);
+export function removeFromCart(key: string): void {
+  const cart = getCart().filter((i) => lineKey(i) !== key);
   writeJSON(CART_KEY, cart);
   emit();
 }
 
-export function setQty(slug: string, qty: number): void {
-  if (qty <= 0) return removeFromCart(slug);
+export function setQty(key: string, qty: number): void {
+  if (qty <= 0) return removeFromCart(key);
   const cart = getCart();
-  const item = cart.find((i) => i.slug === slug);
+  const item = cart.find((i) => lineKey(i) === key);
   if (!item) return;
   item.qty = qty;
   writeJSON(CART_KEY, cart);
