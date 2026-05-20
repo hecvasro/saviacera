@@ -11,9 +11,9 @@ description: >-
 
   • Drift & Bloom: notas de ozono, sal de mar, naranja, fresia, jazmín y haba tonka.
 
-  • Pink Grapefruit:
+  • Pink Grapefruit: notas puras de toronja.
 
-  • Velvet Rose:
+  • Velvet Rose: notas de rosa, magnolia, patchouli y toronja.
 category: velas
 tags:
   - vela
