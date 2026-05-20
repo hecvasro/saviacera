@@ -15,7 +15,7 @@ available: true
 variantLabel: ""
 images:
   - /uploads/38315c7c-4f0c-4efa-ab63-466608866e04.jpeg
-featured: false
+featured: true
 order: 100
 ---
 > *Todos* *nuestros* *jabones* *son*:
