@@ -6,7 +6,14 @@ description: >-
   significa en nuestras vidas: amor incondicional, guía y lugar seguro. 
 
 
-  Inspirada en el encuentro del mar con la tierra, esta vela fusiona la pureza de la sal marina con la elegancia atemporal de las orquídeas frescas. Con un corazón de jazmín y una base suave de haba tonka.
+  Disponible en tres aromas: 
+
+
+  • Drift & Bloom: 
+
+  • Pink Grapefruit:
+
+  • Velvet Rose:
 category: velas
 tags:
   - vela
