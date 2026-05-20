@@ -1,5 +1,5 @@
 ---
-name: Drift & Bloom - Edición Mamá
+name: Vela aromática 10 oz - Edición Mamá
 tagline: Un homenaje a mamá.
 description: >-
   Que esta vela sea el recordatorio diario para mamá de todo lo que ella
