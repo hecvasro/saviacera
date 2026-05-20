@@ -17,10 +17,12 @@ priceDOP: 315
 available: true
 variantLabel: "Set de sachets personalizados "
 variants:
+  - name: Set de 2 sachets personalizados
+    priceDOP: 615
   - name: Set de 6 sachets personalizados
     priceDOP: 1800
 images:
-  - /uploads/e8af24f5-5af4-4ec5-9187-953f403f0c00.jpeg
+  - /uploads/e8af24f5-5af4-4ec5-9187-953f403f0c00.jpg
   - /uploads/img_7304.jpeg
   - /uploads/img_7393.jpeg
   - /uploads/a01afe7c-1465-4a35-892f-472b3fc0ba24.jpeg
