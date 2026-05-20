@@ -203,6 +203,11 @@ collections:
           - name: homeHero
             label: "Hero de la portada (foto principal en la página de inicio)"
             widget: image
+          - name: homeStoryImage
+            label: "Foto de la sección Nuestra Historia (en la portada)"
+            widget: image
+            required: false
+            hint: "La foto grande que aparece en la sección 'De nuestras manos, a tu alma' de la portada."
           - name: footerImage
             label: "Imagen del footer"
             widget: image
