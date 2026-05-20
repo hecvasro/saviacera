@@ -12,7 +12,7 @@ Astro 5 + Tailwind v4 static site. Spanish (DR) primary, English wired up for la
 
 **Current state (2026-05-19)**:
 
-- Site live at `https://saviacera.com` (apex canonical) and `https://www.saviacera.com`.
+- Site live at `https://saviacera.com` (apex canonical). `https://www.saviacera.com` 301-redirects to the apex via a Cloudflare Redirect Rule (live 2026-05-20).
 - Order flow live: cart → Apps Script `/exec` → Google Sheet row + WhatsApp deep link, all driven by build-time env vars in the Cloudflare dashboard.
 - Decap CMS live, wife actively editing the real catalog (no longer the sample placeholders). Admin at `https://saviacera.com/innh85dhz2/`.
 - GitHub → Workers Builds auto-deploy is live: push to `main` is the deploy.
@@ -51,7 +51,7 @@ Apps Script source: `apps-script/Code.gs`. README has the sheet-setup steps.
 
 ## Deployment — Cloudflare Workers Static Assets
 
-Production: **`https://saviacera.com`** (apex, canonical). Also serves at `https://www.saviacera.com`. The Workers default `saviacera.<account-subdomain>.workers.dev` URL works too but isn't user-facing. Worker name: `saviacera`. Production branch: `main`. Cloudflare account: `hecvasro` (`75ec2b0c985f290ad848d43116bc32e7`). Zone tag for `saviacera.com`: `e62d1de2811789a1d744737a22148b42`.
+Production: **`https://saviacera.com`** (apex, canonical). `https://www.saviacera.com` is served by Cloudflare but 301-redirects to the apex (see "Custom domains" below). The Workers default `saviacera.<account-subdomain>.workers.dev` URL works too but isn't user-facing. Worker name: `saviacera`. Production branch: `main`. Cloudflare account: `hecvasro` (`75ec2b0c985f290ad848d43116bc32e7`). Zone tag for `saviacera.com`: `e62d1de2811789a1d744737a22148b42`.
 
 The deploy target is **Workers Static Assets**, not Cloudflare Pages. The site is purely static (`./dist` from `astro build`), so there's no `main` worker script — `wrangler.jsonc` only declares the assets binding. Configuration:
 
@@ -154,7 +154,7 @@ Legacy: the previous Pages-based setup also relied on `Account → Cloudflare Pa
 
 ### Custom domains
 
-The `saviacera.com` zone is registered through Cloudflare Registrar, so DNS is fully on Cloudflare. Both apex and `www` serve the live site with auto-issued/auto-renewed TLS certs (currently Google CA, HTTP-01 validation).
+The `saviacera.com` zone is registered through Cloudflare Registrar, so DNS is fully on Cloudflare. The apex serves the live site with auto-issued/auto-renewed TLS certs (currently Google CA, HTTP-01 validation). `www.saviacera.com` is a proxied `CNAME → saviacera.com` DNS record paired with a **Cloudflare Redirect Rule** that 301s every request to the apex, preserving path and query string. The rule lives in the zone's `http_request_dynamic_redirect` ruleset entrypoint — expression `(http.host eq "www.saviacera.com")`, target `concat("https://saviacera.com", http.request.uri.path)`. It was created via the Cloudflare API (`PUT /zones/{zone_id}/rulesets/phases/http_request_dynamic_redirect/entrypoint`) on 2026-05-20 and is **not** committed to the repo — it's pure Cloudflare config, managed in the dashboard or via API.
 
 **Migration note (Pages → Workers Static Assets)**: under the old Pages setup the apex and `www` were attached as Pages custom domains with CNAMEs pointing at `saviacera.pages.dev`. After switching the deploy to Workers Static Assets (this commit), the existing Pages-side attachments need to be re-pointed at the Worker. The simplest path: in the dashboard, **Workers & Pages → saviacera (Worker) → Settings → Domains & Routes → Add Custom Domain** for both `saviacera.com` and `www.saviacera.com`. Cloudflare manages the underlying DNS records automatically for Workers Custom Domains — you don't create CNAMEs manually like with Pages. The TLS cert provisions on its own. While both old (Pages) and new (Worker) attachments exist simultaneously, traffic routes to whichever Cloudflare resolves first; remove the Pages attachments once the Worker ones go active.
 

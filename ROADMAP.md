@@ -2,12 +2,12 @@
 
 Status snapshot, what's done, what's pending, and what needs a decision before it can proceed. The wife-facing how-to lives in [README.md](./README.md) (Spanish). The technical/operating reference lives in [CLAUDE.md](./CLAUDE.md). This file is the **handoff doc** — kept terse and actionable so a future Claude session (or you, returning a week later) can pick up cold.
 
-Last updated: 2026-05-19.
+Last updated: 2026-05-20.
 
 ## Status snapshot
 
 - **Code lives at** `github.com/hecvasro/saviacera` (private remote, branch `main`).
-- **Production site**: https://saviacera.com (apex canonical) and https://www.saviacera.com — both serve the live build with auto-issued certs.
+- **Production site**: https://saviacera.com (apex canonical), auto-issued certs. `https://www.saviacera.com` now 301s to the apex via a Cloudflare Redirect Rule (live 2026-05-20).
 - **Hosting**: Cloudflare Workers Static Assets, Worker name `saviacera`, configured by `wrangler.jsonc`. Migrated off Cloudflare Pages on 2026-05-12.
 - **CI/Deploy**: GitHub → Cloudflare Workers Builds auto-deploy is **live**. Every push to `main` triggers a Cloudflare-side build + `wrangler deploy`. `npm run deploy` remains as a manual fallback.
 - **Order flow**: **live**. `src/lib/checkout.ts` reads `PUBLIC_ORDER_ENDPOINT` and `PUBLIC_WHATSAPP_NUMBER` from `import.meta.env`. The Apps Script `/exec` endpoint is deployed and smoke-tested (`SAV-TEST-0001` appended to the Google Sheet). `Footer.astro` reads the env-driven WhatsApp number.
@@ -42,22 +42,13 @@ Last updated: 2026-05-19.
 - [x] **Site images collection in Decap** (commit `0bdbfce`, 2026-05-16). Files-collection in `public/innh85dhz2/config.yml` writing to `src/content/site/images.json`. The wife can now change the home hero, footer image, and Personalizados gallery from the admin panel — no skill or code touch required. `Footer.astro` and the relevant pages import the JSON directly.
 - [x] **Product variations** (2026-05-19). Schema (`src/content.config.ts`) and Decap config got a single-axis `variantLabel` + `variants[]` (each option has `name`, optional `priceDOP`, optional `sku`). Cart keys lines by `slug::variant` so two scents stay as two cart lines. PDP renders a `<select>` that forces explicit choice and updates the displayed price on change. WhatsApp message + Apps Script payload include the chosen option. `Code.gs` updated to add the variant in parentheses on the sheet — **manual Apps Script redeploy required** to pick up the sheet-side change; the WhatsApp message side works without redeploy. `agregar-producto` and `editar-producto` skills updated in the same pass and a stale `kits`/`stock` reference from before the taxonomy and brittleness fixes was scrubbed at the same time.
 - [x] **Instagram in footer** (2026-05-19). `Footer.astro` Contacto column links to `https://instagram.com/sabiasera` as `@sabiasera`.
+- [x] **`www` → apex 301 redirect** (2026-05-20). Previously `www.saviacera.com` had no DNS record and wasn't reachable. Created via the Cloudflare API: (a) a proxied `CNAME www → saviacera.com` DNS record on the zone, and (b) a Redirect Rule named `www → apex` in the `http_request_dynamic_redirect` ruleset entrypoint — expression `(http.host eq "www.saviacera.com")`, action 301 redirect to `concat("https://saviacera.com", http.request.uri.path)` preserving the query string. Verified: `https://www.saviacera.com/aromaticos?utm=test` → 301 → `https://saviacera.com/aromaticos/?utm=test`. The rule is pure Cloudflare config — not committed to the repo.
 
 ## In-flight
 
 - **Real catalog build-out** — wife is past the smoke-test phase. As of 2026-05-19 there are 8 real products with real photos managed via Decap. She has full control over the editor without coaching for the basic edit/create flows. Remaining content work and any new variations setups are her ongoing work, not a blocker.
 
 ## Pending
-
-### `www` → apex 301 redirect (canonical hardening, low priority)
-
-Both apex and `www` currently serve the same content with 200. For real SEO canonical behavior, `www` should 301 → apex. Three paths open (you picked apex as canonical, so direction is set; only the **mechanism** is undecided):
-
-1. **Cloudflare Redirect Rule via the dashboard** (~60s, **recommended**). Cloudflare → `saviacera.com` zone → Rules → Redirect Rules → Create. Match: `Hostname equals www.saviacera.com`. Action: Dynamic redirect, `concat("https://saviacera.com", http.request.uri.path)`, 301, preserve query string. No token-scope change required.
-2. **Add `Zone → Config Rules → Edit`** to the API token, and the next Claude session creates the redirect via API.
-3. **Skip the 301**, add `<link rel="canonical" href="https://saviacera.com{path}" />` in `BaseLayout.astro` so search engines still know which is primary. Weaker signal but zero infra.
-
-Recommendation: 1. Lowest total effort.
 
 ### Theme collection in Decap (fonts / colors / logo via CMS)
 
