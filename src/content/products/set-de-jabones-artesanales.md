@@ -9,7 +9,11 @@ description: >-
 
 
   Este set viene empacado en caja de madera con lazo, listo para regalar.
-category: jabones
+category: sets
+tags:
+  - jabon
+  - set
+  - cuidado-personal
 priceDOP: 1450
 available: true
 variantLabel: ""
