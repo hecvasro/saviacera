@@ -3,8 +3,8 @@ name: Cherry blossom| Jabón Artesanal
 tagline: ""
 description: >-
   Disfruta de un aroma floral y ligero. Nuestra fórmula ultra-hidratante de
-  leche de cabra y mantecas vegetales, limpia con suavidad, devolviendo la
-  hidratación a tu piel sin resecarla. 
+  leche de cabra, mantecas vegetales + arcilla kaolín rosa y arcilla ghassoul,
+  limpia con suavidad y purifica y equilibra la piel en profundidad. 
 
 
   Esta barra combina las propiedades del aceite esencial de geranio que ayuda a tonificar la piel, calmar rojeces y mejorar las imperfecciones de la piel, con las propiedades suavizantes del polvo de arruruz que deja una sensación aterciopelada al tacto, sobre la piel. 
