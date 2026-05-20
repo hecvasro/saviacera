@@ -9,7 +9,7 @@ description: >-
   Disponible en tres aromas: 
 
 
-  • Drift & Bloom: 
+  • Drift & Bloom: notas de ozono, sal de mar, naranja, fresia, jazmín y haba tonka.
 
   • Pink Grapefruit:
 
