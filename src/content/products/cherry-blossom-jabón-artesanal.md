@@ -1,5 +1,5 @@
 ---
-name: Cherry blossom| Jabón Artesanal
+name: Cherry blossom | Jabón Artesanal
 tagline: ""
 description: >-
   Disfruta de un aroma floral y ligero. Nuestra fórmula ultra-hidratante de
