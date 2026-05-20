@@ -34,7 +34,6 @@ images:
   - /uploads/58acb04b-5f73-4dad-939e-ed50253d6e1c-2.jpeg
 details:
   - Vela aromática de cera de coco y soya, 10 oz.
-  - "Notas: ozono, sal de mar, jazmín, freesia, haba tonka y naranja."
 featured: true
 order: 100
 ---
