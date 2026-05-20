@@ -18,3 +18,8 @@ images:
 featured: false
 order: 100
 ---
+> *Todos* *nuestros* *jabones* *son*:
+
+* Hechos a mano en lotes pequeños.
+* Elaborados con una base de leche de cabra natural y manteca de cacao y karité.
+* Formulados con ingredientes limpios, extractos botánicos e ifusionados con aceites esenciales, fragancias libres de ftalatos y disruptores endocrinos; y aceites vegetales orgánicos.
