@@ -25,6 +25,11 @@ tags:
   - dia-de-las-madres
 priceDOP: 1550
 available: true
+variantLabel: Aromas
+variants:
+  - name: Drift & Bloom
+  - name: Pink Grapefruit
+  - name: Velvet Rose
 images:
   - /uploads/58acb04b-5f73-4dad-939e-ed50253d6e1c-2.jpeg
 details:
