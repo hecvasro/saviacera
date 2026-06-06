@@ -9,7 +9,7 @@ description: >-
 
   Esta barra combina las propiedades del aceite esencial de geranio que ayuda a tonificar la piel, calmar rojeces y mejorar las imperfecciones de la piel, con las propiedades suavizantes del polvo de arruruz que deja una sensación aterciopelada al tacto, sobre la piel. 
 category: jabones
-priceDOP: 400
+priceDOP: 450
 available: true
 images:
   - /uploads/136cf9cc-2863-447f-b245-c7e03a07f7f4.jpeg
