@@ -8,7 +8,7 @@ description: >-
 
   Nuestra fórmula ultra-hidratante de leche de cabra y mantecas vegetales, limpia con suavidad, devolviendo la hidratación a tu piel sin resecarla. Esta barra está ifusionada con aceite esencial de lavanda, reconocido por sus propiedades cicatrizantes y regeneradoras, mientras que la arcilla bentonita purifica profundamente los poros sin alterar la barrera natural de la piel.
 category: jabones
-priceDOP: 400
+priceDOP: 450
 available: true
 images:
   - /uploads/b12f1b2e-c4cb-43fe-aefa-da3910b64fdb.jpeg
